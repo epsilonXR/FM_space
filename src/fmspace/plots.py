@@ -67,3 +67,50 @@ def heatmap(assoc, model, labels, n_pcs=20):
     axes[-1, 0].set_xlabel("Principal component", color=INK_SECONDARY)
     axes[0, 0].set_title(MODEL_NAMES[model], loc="left", color=INK, fontweight="bold")
     return fig
+
+
+# 模型的颜色固定，所有图通用（分类色板前 4 个，按固定顺序）
+MODEL_COLORS = {"siglip": "#2a78d6", "medsiglip": "#eb6834", "conceptclip": "#1baf7a", "flair": "#eda100"}
+GRID, AXIS = "#e6e5e0", "#c9c8c3"
+
+
+def _style(ax):
+    ax.spines[["top", "right", "left"]].set_visible(False)
+    ax.spines["bottom"].set_color(AXIS)
+    ax.tick_params(colors=INK_SECONDARY, length=0)
+    ax.grid(axis="y", color=GRID, linewidth=0.6)
+    ax.set_axisbelow(True)
+
+
+def _end_labels(ax, x, ends, min_gap):
+    """在线的右端标模型名：按末端的值排序、互相至少隔 min_gap，用细线连到末端。"""
+    ends = sorted(ends)
+    ys = []
+    for y, _ in ends:
+        ys.append(max(y, ys[-1] + min_gap) if ys else y)
+    shift = np.mean([y for y, _ in ends]) - np.mean(ys)
+    for (y, text), y_label in zip(ends, ys):
+        ax.annotate(text, xy=(x, y), xytext=(x * 1.04, y_label + shift), textcoords="data", va="center",
+                    color=INK, annotation_clip=False, arrowprops={"arrowstyle": "-", "color": AXIS, "lw": 0.6})
+
+
+def variance_curve(variance, models, n_pcs=50, cumulative=False):
+    """各模型前 n_pcs 个 PC 的解释方差（%）；cumulative=True 时画累计值。"""
+    fig, ax = plt.subplots(figsize=(6.5, 3.6), facecolor=SURFACE)
+    ends = []
+    for m in models:
+        d = variance[(variance["model"] == m) & (variance["component"] <= n_pcs)]
+        y = 100 * (d["ratio"].cumsum() if cumulative else d["ratio"]).to_numpy()
+        ax.plot(d["component"], y, color=MODEL_COLORS[m], linewidth=2, label=MODEL_NAMES[m])
+        ends.append((y[-1], MODEL_NAMES[m]))
+
+    ax.set_xlim(1, n_pcs)
+    ax.set_ylim(0, 100 if cumulative else None)
+    ax.set_xticks([1, *range(10, n_pcs + 1, 10)])
+    ax.set_xlabel("Principal component", color=INK_SECONDARY)
+    ax.set_ylabel(("Cumulative explained" if cumulative else "Explained") + " variance (%)", color=INK_SECONDARY)
+    _style(ax)
+    if cumulative:  # 不累计时各条线的末端都接近 0，标在末端没有意义
+        _end_labels(ax, n_pcs, ends, min_gap=0.06 * ax.get_ylim()[1])
+    ax.legend(frameon=False, loc="lower right" if cumulative else "upper right", labelcolor=INK)
+    return fig
