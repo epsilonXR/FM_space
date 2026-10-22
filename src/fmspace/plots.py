@@ -130,6 +130,7 @@ def grade_ridgeline(score, grades, model, xlim, xlabel="PC1 score (z-score)", bw
         ax.plot(x, np.where(shown, base + d, np.nan), color=color, linewidth=0.8, zorder=3)
         median = np.median(score[grades == g])
         ax.plot([median, median], [base, base + kdes[g](median)[0]], color=color, linewidth=0.8, linestyle=(0, (3, 2)), zorder=3)
+        ax.plot(median, base, "o", color=color, markersize=4, markeredgewidth=0, zorder=4)  # 中位数与基线的交点
         label_y = base + 0.31 * h
         ax.text(-0.015, label_y, f"DR {g}", transform=ax.get_yaxis_transform(), ha="right", va="bottom", color=INK)
         ax.text(-0.015, label_y, f"n = {(grades == g).sum()}", transform=ax.get_yaxis_transform(), ha="right", va="top",
