@@ -118,12 +118,14 @@ def grade_ridgeline(score, grades, model, xlim, xlabel="PC1 score (z-score)", bw
     peak = max(d.max() for d in densities)
     h = step * peak
 
+    ticks = np.arange(np.ceil(xlim[0]), np.floor(xlim[1]) + 1)
     fig, ax = plt.subplots(figsize=(7, 4.2), facecolor=SURFACE)
     ax.axvline(0, color=AXIS, linewidth=0.8, linestyle="--", zorder=0)
     for g, color in enumerate(GRADE_COLORS):
         base, d = g * h, densities[g]
         shown = d > 0.003 * d.max()  # 只画密度不为 0 的部分
         ax.axhline(base, color=color, alpha=0.35, linewidth=0.8, zorder=1)
+        ax.vlines(ticks, base - 0.08 * h, base, color=color, alpha=0.6, linewidth=0.9, zorder=1)  # 每行都画刻度
         ax.fill_between(x, base, base + d, where=shown, color=color, alpha=fill_alpha, linewidth=0, zorder=2)
         ax.plot(x, np.where(shown, base + d, np.nan), color=color, linewidth=1.4, zorder=3)
         median = np.median(score[grades == g])
@@ -134,12 +136,11 @@ def grade_ridgeline(score, grades, model, xlim, xlabel="PC1 score (z-score)", bw
                 color=INK_SECONDARY, fontsize=8)
 
     ax.set_xlim(*xlim)
-    ax.set_ylim(-0.02 * h, (len(densities) - 1) * h + 1.05 * peak)
+    ax.set_ylim(-0.08 * h, (len(densities) - 1) * h + 1.05 * peak)
+    ax.set_xticks(ticks, [f"{t:g}" for t in ticks])  # 数字只标在最下面（DR 0）一行
     ax.set_yticks([])
-    ax.spines[["top", "right", "left"]].set_visible(False)
-    ax.spines["bottom"].set_color(AXIS)
-    ax.spines["bottom"].set_position(("outward", 4))
-    ax.tick_params(colors=INK_SECONDARY, length=3, color=AXIS)
+    ax.spines[:].set_visible(False)
+    ax.tick_params(colors=INK_SECONDARY, length=0, pad=2)
     ax.set_xlabel(xlabel, color=INK_SECONDARY)
     ax.set_title(MODEL_NAMES[model], loc="left", color=INK, fontweight="bold")
     return fig
