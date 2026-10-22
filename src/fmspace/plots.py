@@ -115,14 +115,8 @@ GRADE_STYLES = [
 ]
 
 
-def _tint(color, amount):
-    """与背景色混合：amount = 0 为原色，1 为背景色。"""
-    c, w = np.array(to_rgb(color)), np.array(to_rgb(SURFACE))
-    return tuple(c + (w - c) * amount)
-
-
 def grade_ridgeline(score, grades, model, xlim, xlabel="PC1 score (z-score)", bw=0.35, step=0.55):
-    """各 DR 等级在一维分数上的 KDE，画成山脊图：每个等级一行、各自归一化，竖线为中位数。
+    """各 DR 等级在一维分数上的 KDE，画成山脊图：每个等级一行、各自归一化，竖线为中位数，0 处虚线为数据集均值。
     step 为行距（相对最高峰），小于 1 时相邻两行略有重叠。"""
     x = np.linspace(*xlim, 500)
     kdes = [gaussian_kde(score[grades == g], bw_method=bw) for g in range(len(GRADE_STYLES))]
@@ -130,17 +124,15 @@ def grade_ridgeline(score, grades, model, xlim, xlabel="PC1 score (z-score)", bw
     h = step * max(d.max() for d in densities)
 
     fig, ax = plt.subplots(figsize=(7, 3.8), facecolor=SURFACE)
-    for v in range(int(np.ceil(xlim[0])), int(np.floor(xlim[1])) + 1):
-        ax.axvline(v, color=AXIS if v == 0 else GRID, linewidth=0.8, linestyle="--" if v == 0 else "-", zorder=0)
+    ax.axvline(0, color=AXIS, linewidth=0.8, linestyle="--", zorder=0)
 
     for g in reversed(range(len(densities))):  # 下面的行画在前面，盖住上一行的底部
         color, _ = GRADE_STYLES[g]
         base, curve, z = g * h, g * h + densities[g], 10 * (len(densities) - g)
-        ax.fill_between(x, base, curve, color=_tint(color, 0.55), linewidth=0, zorder=z)
-        ax.plot(x, curve, color=SURFACE, linewidth=2.2, zorder=z + 1)
-        ax.plot(x, curve, color=color, linewidth=1.3, zorder=z + 2)
+        ax.fill_between(x, base, curve, color=color, alpha=0.15, linewidth=0, zorder=z)
+        ax.plot(x, curve, color=color, linewidth=0.9, zorder=z + 2)
         median = np.median(score[grades == g])
-        ax.plot([median, median], [base, base + kdes[g](median)[0]], color=color, linewidth=1.3, zorder=z + 2)
+        ax.plot([median, median], [base, base + kdes[g](median)[0]], color=color, linewidth=0.9, zorder=z + 2)
         ax.text(-0.01, base + 0.1 * h, f"DR {g}", transform=ax.get_yaxis_transform(), ha="right", va="bottom",
                 color=INK, fontweight="bold")
         ax.text(xlim[1], base + 0.1 * h, f"n = {(grades == g).sum()}", ha="right", va="bottom",
