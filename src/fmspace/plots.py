@@ -104,8 +104,15 @@ def variance_curve(variance, models, n_pcs=50, mark=20):
     return fig
 
 
-# DR 等级是有序的：同一色相由浅到深（已通过 validate_palette --ordinal）
-GRADE_COLORS = ["#86b6ef", "#5598e7", "#2a78d6", "#1c5cab", "#0d366b"]
+# DR 等级：由冷到暖的 5 种颜色（validate_palette --pairs all 通过；DR 1 与 DR 3 在红绿色弱下较接近，
+# 所以这两条另用虚线 / 点划线区分）
+GRADE_STYLES = [
+    ("#2a78d6", "-"),
+    ("#1baf7a", (0, (5, 2))),
+    ("#eda100", "-"),
+    ("#e87ba4", (0, (5, 2, 1, 2))),
+    ("#a8322d", "-"),
+]
 
 
 def grade_kde(score, grades, model, xlim, xlabel="PC1 score (z-score)", bw=0.35):
@@ -113,10 +120,10 @@ def grade_kde(score, grades, model, xlim, xlabel="PC1 score (z-score)", bw=0.35)
     x = np.linspace(*xlim, 500)
     fig, ax = plt.subplots(figsize=(8, 3), facecolor=SURFACE)
     ax.axvline(0, color=AXIS, linestyle="--", linewidth=1, zorder=1)
-    for g, color in enumerate(GRADE_COLORS):
+    for g, (color, style) in enumerate(GRADE_STYLES):
         values = score[grades == g]
         density = gaussian_kde(values, bw_method=bw)(x) * len(values) / len(score)
-        ax.plot(x, density, color=color, linewidth=2, label=f"DR {g}")
+        ax.plot(x, density, color=color, linestyle=style, linewidth=2, label=f"DR {g}")
         ax.fill_between(x, density, color=color, alpha=0.12, linewidth=0)
 
     ax.set_xlim(*xlim)
