@@ -83,41 +83,34 @@ def _style(ax):
 
 
 def _end_labels(ax, x, ends, min_gap):
-    """在线的右端标模型名：按末端的值排序、互相至少隔 min_gap，用细线连到末端。
-    纵轴为对数刻度时，min_gap 以 log10 为单位。"""
-    log = ax.get_yscale() == "log"
+    """在线的右端标模型名：按末端的值排序、互相至少隔 min_gap，用细线连到末端。"""
     ends = sorted(ends)
-    pos = [np.log10(y) if log else y for y, _ in ends]
     ys = []
-    for y in pos:
+    for y, _ in ends:
         ys.append(max(y, ys[-1] + min_gap) if ys else y)
-    ys = np.array(ys) + np.mean(pos) - np.mean(ys)
+    shift = np.mean([y for y, _ in ends]) - np.mean(ys)
     for (y, text), y_label in zip(ends, ys):
-        ax.annotate(text, xy=(x, y), xytext=(x * 1.04, 10 ** y_label if log else y_label), textcoords="data", va="center",
+        ax.annotate(text, xy=(x, y), xytext=(x * 1.04, y_label + shift), textcoords="data", va="center",
                     color=INK, annotation_clip=False, arrowprops={"arrowstyle": "-", "color": AXIS, "lw": 0.6})
 
 
-def variance_curve(variance, models, n_pcs=50):
-    """各模型前 n_pcs 个 PC 的累计解释方差（%），横轴和纵轴都是对数刻度。"""
+def variance_curve(variance, models, n_pcs=50, cumulative=False):
+    """各模型前 n_pcs 个 PC 的解释方差（%）；cumulative=True 时画累计值。"""
     fig, ax = plt.subplots(figsize=(6.5, 3.6), facecolor=SURFACE)
     ends = []
     for m in models:
         d = variance[(variance["model"] == m) & (variance["component"] <= n_pcs)]
-        y = 100 * d["ratio"].cumsum().to_numpy()
+        y = 100 * (d["ratio"].cumsum() if cumulative else d["ratio"]).to_numpy()
         ax.plot(d["component"], y, color=MODEL_COLORS[m], linewidth=2, label=MODEL_NAMES[m])
         ends.append((y[-1], MODEL_NAMES[m]))
 
-    ax.set_xscale("log")
     ax.set_xlim(1, n_pcs)
-    ticks = [t for t in (1, 2, 5, 10, 20, 50, 100) if t <= n_pcs]
-    ax.set_xticks(ticks, ticks)
-    ax.set_yscale("log")
-    ax.set_ylim(10, 100)
-    ax.set_yticks([10, 20, 30, 50, 70, 100], [10, 20, 30, 50, 70, 100])
-    ax.minorticks_off()
+    ax.set_ylim(0, 100 if cumulative else None)
+    ax.set_xticks([1, *range(10, n_pcs + 1, 10)])
     ax.set_xlabel("Principal component", color=INK_SECONDARY)
-    ax.set_ylabel("Cumulative explained variance (%)", color=INK_SECONDARY)
+    ax.set_ylabel(("Cumulative explained" if cumulative else "Explained") + " variance (%)", color=INK_SECONDARY)
     _style(ax)
-    _end_labels(ax, n_pcs, ends, min_gap=0.055)
-    ax.legend(frameon=False, loc="lower right", labelcolor=INK)
+    if cumulative:  # 不累计时各条线的末端都接近 0，标在末端没有意义
+        _end_labels(ax, n_pcs, ends, min_gap=0.06 * ax.get_ylim()[1])
+    ax.legend(frameon=False, loc="lower right" if cumulative else "upper right", labelcolor=INK)
     return fig
