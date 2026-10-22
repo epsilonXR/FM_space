@@ -35,14 +35,15 @@ def load_metadata(data_dir):
     assert eye.notna().all(), "image_id 无法解析眼别"
     level = raw["left_eye_DR_Level"].where(eye == "L", raw["right_eye_DR_Level"])
 
+    # 不用 CSV 里的 image_path：不同来源的 CSV 写法不一致
     images = data_dir / "regular-fundus-training" / "Images"
-    relative = raw["image_path"].str.replace("\\", "/").str.lstrip("/")
+    path = [images / str(p) / f"{i}.jpg" for p, i in zip(raw["patient_id"], raw["image_id"])]
 
     metadata = pd.DataFrame(
         {
             "patient_id": raw["patient_id"],
             "image_id": raw["image_id"],
-            "path": [images / p for p in relative],
+            "path": path,
             "eye": eye,
             "eye_dr_level": level,
             "overall_quality": raw["Overall quality"],
