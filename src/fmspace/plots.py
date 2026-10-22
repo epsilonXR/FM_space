@@ -104,8 +104,8 @@ def variance_curve(variance, models, n_pcs=50, mark=20):
     return fig
 
 
-# DR 等级：冷色调、高饱和，绿→青→蓝→紫→品红，相邻等级明暗交替以便区分（validate_palette 相邻 ΔE：色弱 18、正常 23）
-GRADE_COLORS = ["#067132", "#12b0b6", "#0661a0", "#a87eff", "#a30877"]
+# DR 等级：OKLCH 色相每隔 72° 取一个（从 270° 起），亮度相同（L = 0.65），各色相取该亮度下的最大饱和度
+GRADE_COLORS = ["#6483ff", "#04a3a7", "#76a006", "#d86e03", "#d856af"]
 
 
 def grade_ridgeline(score, grades, model, xlim, xlabel="PC1 score (z-score)", bw=0.35, step=0.85, fill_alpha=0.1):
