@@ -83,19 +83,22 @@ def _style(ax):
 
 
 def _end_labels(ax, x, ends, min_gap):
-    """在线的右端标模型名：按末端的值排序、互相至少隔 min_gap，用细线连到末端。"""
+    """在线的右端标模型名：按末端的值排序、互相至少隔 min_gap，用细线连到末端。
+    纵轴为对数刻度时，min_gap 以 log10 为单位。"""
+    log = ax.get_yscale() == "log"
     ends = sorted(ends)
+    pos = [np.log10(y) if log else y for y, _ in ends]
     ys = []
-    for y, _ in ends:
+    for y in pos:
         ys.append(max(y, ys[-1] + min_gap) if ys else y)
-    shift = np.mean([y for y, _ in ends]) - np.mean(ys)
+    ys = np.array(ys) + np.mean(pos) - np.mean(ys)
     for (y, text), y_label in zip(ends, ys):
-        ax.annotate(text, xy=(x, y), xytext=(x * 1.04, y_label + shift), textcoords="data", va="center",
+        ax.annotate(text, xy=(x, y), xytext=(x * 1.04, 10 ** y_label if log else y_label), textcoords="data", va="center",
                     color=INK, annotation_clip=False, arrowprops={"arrowstyle": "-", "color": AXIS, "lw": 0.6})
 
 
 def variance_curve(variance, models, n_pcs=50):
-    """各模型前 n_pcs 个 PC 的累计解释方差（%），横轴为对数刻度。"""
+    """各模型前 n_pcs 个 PC 的累计解释方差（%），纵轴为对数刻度。"""
     fig, ax = plt.subplots(figsize=(6.5, 3.6), facecolor=SURFACE)
     ends = []
     for m in models:
@@ -104,15 +107,15 @@ def variance_curve(variance, models, n_pcs=50):
         ax.plot(d["component"], y, color=MODEL_COLORS[m], linewidth=2, label=MODEL_NAMES[m])
         ends.append((y[-1], MODEL_NAMES[m]))
 
-    ax.set_xscale("log")
     ax.set_xlim(1, n_pcs)
-    ax.set_ylim(0, 100)
-    ticks = [t for t in (1, 2, 5, 10, 20, 50, 100) if t <= n_pcs]
-    ax.set_xticks(ticks, ticks)
+    ax.set_xticks([1, *range(10, n_pcs + 1, 10)])
+    ax.set_yscale("log")
+    ax.set_ylim(10, 100)
+    ax.set_yticks([10, 20, 30, 50, 70, 100], [10, 20, 30, 50, 70, 100])
     ax.minorticks_off()
     ax.set_xlabel("Principal component", color=INK_SECONDARY)
     ax.set_ylabel("Cumulative explained variance (%)", color=INK_SECONDARY)
     _style(ax)
-    _end_labels(ax, n_pcs, ends, min_gap=6)
+    _end_labels(ax, n_pcs, ends, min_gap=0.055)
     ax.legend(frameon=False, loc="lower right", labelcolor=INK)
     return fig
