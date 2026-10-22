@@ -37,7 +37,7 @@ def heatmap(assoc, model, labels, n_pcs=20):
         ax.set_yticks(range(len(block)), [LABEL_NAMES[l] for l in block])
         ax.set_xticks(range(n_pcs), range(1, n_pcs + 1))
         ax.tick_params(length=0)
-        cbar = fig.colorbar(image, cax=cax, ticks=[0, 0.5, 1] if len(block) > 1 else [0, 1])
+        cbar = fig.colorbar(image, cax=cax, ticks=[0, 0.5, 1] if len(block) > 1 else [0, 1], format="%.1f")
         cbar.set_label(METRIC_NAMES[m], rotation=0, ha="left", va="center")
 
     for ax in axes[:-1, 0]:
