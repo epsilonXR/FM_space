@@ -94,23 +94,25 @@ def _end_labels(ax, x, ends, min_gap):
                     color=INK, annotation_clip=False, arrowprops={"arrowstyle": "-", "color": AXIS, "lw": 0.6})
 
 
-def variance_curve(variance, models, n_pcs=50, cumulative=False):
-    """各模型前 n_pcs 个 PC 的解释方差（%）；cumulative=True 时画累计值。"""
+def variance_curve(variance, models, n_pcs=50, mark=20):
+    """各模型前 n_pcs 个 PC 的累计解释方差（%）。在 PC mark 处画竖线，图例里给出各模型到这里的累计值。"""
     fig, ax = plt.subplots(figsize=(6.5, 3.6), facecolor=SURFACE)
+    ax.axvline(mark, color=AXIS, linestyle="--", linewidth=1, zorder=1)
     ends = []
     for m in models:
         d = variance[(variance["model"] == m) & (variance["component"] <= n_pcs)]
-        y = 100 * (d["ratio"].cumsum() if cumulative else d["ratio"]).to_numpy()
-        ax.plot(d["component"], y, color=MODEL_COLORS[m], linewidth=2, label=MODEL_NAMES[m])
+        y = 100 * d["ratio"].cumsum().to_numpy()
+        ax.plot(d["component"], y, color=MODEL_COLORS[m], linewidth=2, label=f"{MODEL_NAMES[m]}  {y[mark - 1]:.1f}%")
+        ax.plot(mark, y[mark - 1], "o", color=MODEL_COLORS[m], markersize=7, markeredgecolor=SURFACE, markeredgewidth=1.5, zorder=3)
         ends.append((y[-1], MODEL_NAMES[m]))
 
     ax.set_xlim(1, n_pcs)
-    ax.set_ylim(0, 100 if cumulative else None)
+    ax.set_ylim(0, 100)
     ax.set_xticks([1, *range(10, n_pcs + 1, 10)])
     ax.set_xlabel("Principal component", color=INK_SECONDARY)
-    ax.set_ylabel(("Cumulative explained" if cumulative else "Explained") + " variance (%)", color=INK_SECONDARY)
+    ax.set_ylabel("Cumulative explained variance (%)", color=INK_SECONDARY)
     _style(ax)
-    if cumulative:  # 不累计时各条线的末端都接近 0，标在末端没有意义
-        _end_labels(ax, n_pcs, ends, min_gap=0.06 * ax.get_ylim()[1])
-    ax.legend(frameon=False, loc="lower right" if cumulative else "upper right", labelcolor=INK)
+    _end_labels(ax, n_pcs, ends, min_gap=6)
+    legend = ax.legend(frameon=False, loc="lower right", labelcolor=INK, title=f"Cumulative at PC {mark}")
+    legend.get_title().set_color(INK_SECONDARY)
     return fig
