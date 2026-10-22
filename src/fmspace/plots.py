@@ -104,32 +104,26 @@ def variance_curve(variance, models, n_pcs=50, mark=20):
     return fig
 
 
-# DR 等级：由冷到暖的 5 种颜色（validate_palette --pairs all 通过；DR 1 与 DR 3 在红绿色弱下较接近，
-# 所以这两条另用虚线 / 点划线区分）
-GRADE_STYLES = [
-    ("#2a78d6", "-"),
-    ("#1baf7a", (0, (5, 2))),
-    ("#eda100", "-"),
-    ("#e87ba4", (0, (5, 2, 1, 2))),
-    ("#a8322d", "-"),
-]
+# DR 等级：冷色、高饱和，由浅青到深紫，亮度单调变暗（validate_palette --ordinal 的亮度检查通过）
+GRADE_COLORS = ["#00c2d1", "#1a9be6", "#3366e8", "#5b34c9", "#6d1385"]
 
 
-def grade_ridgeline(score, grades, model, xlim, xlabel="PC1 score (z-score)", bw=0.35, step=0.85, fill_alpha=0.08):
+def grade_ridgeline(score, grades, model, xlim, xlabel="PC1 score (z-score)", bw=0.35, step=0.85, fill_alpha=0.1):
     """各 DR 等级在一维分数上的 KDE，画成山脊图：每个等级一行、各自归一化。
-    彩色虚线为中位数，0 处灰色虚线为数据集均值。step 为行距（相对最高峰）；fill_alpha = 0 时不填充。"""
+    彩色虚线为中位数，0 处灰色虚线为数据集均值。每行的基线与填充同色。
+    step 为行距（相对最高峰）；fill_alpha = 0 时不填充。"""
     x = np.linspace(*xlim, 500)
-    kdes = [gaussian_kde(score[grades == g], bw_method=bw) for g in range(len(GRADE_STYLES))]
+    kdes = [gaussian_kde(score[grades == g], bw_method=bw) for g in range(len(GRADE_COLORS))]
     densities = [k(x) for k in kdes]
     peak = max(d.max() for d in densities)
     h = step * peak
 
     fig, ax = plt.subplots(figsize=(7, 4.2), facecolor=SURFACE)
     ax.axvline(0, color=AXIS, linewidth=0.8, linestyle="--", zorder=0)
-    for g, (color, _) in enumerate(GRADE_STYLES):
+    for g, color in enumerate(GRADE_COLORS):
         base, d = g * h, densities[g]
         shown = d > 0.003 * d.max()  # 只画密度不为 0 的部分
-        ax.axhline(base, color=GRID, linewidth=0.8, zorder=1)
+        ax.axhline(base, color=color, alpha=0.35, linewidth=0.8, zorder=1)
         ax.fill_between(x, base, base + d, where=shown, color=color, alpha=fill_alpha, linewidth=0, zorder=2)
         ax.plot(x, np.where(shown, base + d, np.nan), color=color, linewidth=1.1, zorder=3)
         median = np.median(score[grades == g])
