@@ -15,7 +15,7 @@ LABEL_NAMES = {
 }
 METRIC_NAMES = {"spearman": r"Spearman $|\rho|$", "auroc": r"$2|\mathrm{AUC} - 0.5|$"}
 
-INK, INK_SECONDARY, SURFACE = "#0b0b0b", "#52514e", "#ffffff"
+INK, INK_SECONDARY, INK_MUTED, SURFACE = "#0b0b0b", "#52514e", "#a3a29d", "#ffffff"
 # 单色由浅到深：0 接近背景色，强关联最深；两种指标各用一个色相
 CMAPS = {
     "spearman": LinearSegmentedColormap.from_list("blue", [SURFACE, "#cde2fb", "#86b6ef", "#3987e5", "#1c5cab", "#0d366b"]),
@@ -39,15 +39,16 @@ def heatmap(assoc, model, labels, n_pcs=20):
 
     fig, axes = plt.subplots(
         len(blocks), 2, squeeze=False, facecolor=SURFACE,
-        figsize=(0.45 * n_pcs + 2.5, 0.4 * len(labels) + 1.2),
+        figsize=(0.5 * n_pcs + 2.5, 0.42 * len(labels) + 1.2),
         gridspec_kw={"height_ratios": [len(b) for _, b in blocks], "width_ratios": [n_pcs, 0.3], "hspace": 0.18, "wspace": 0.03},
     )
     for (m, block), (ax, cax) in zip(blocks, axes):
         values = table.loc[block].to_numpy()
         mesh = ax.pcolormesh(values, cmap=CMAPS[m], vmin=0, vmax=1, edgecolors=SURFACE, linewidth=1.5)
         for (i, j), v in np.ndenumerate(values):
-            color = _text_color(to_rgb(CMAPS[m](v)))
-            ax.text(j + 0.5, i + 0.5, f"{v:.2f}", ha="center", va="center", fontsize=9, color=color)
+            text = f"{v:.2f}"
+            color = INK_MUTED if float(text) < 0.1 else _text_color(to_rgb(CMAPS[m](v)))
+            ax.text(j + 0.5, i + 0.5, text, ha="center", va="center", fontsize=11, color=color)
         ax.invert_yaxis()
         ax.set_yticks(np.arange(len(block)) + 0.5, [LABEL_NAMES[l] for l in block], color=INK)
         ax.set_xticks(np.arange(n_pcs) + 0.5, range(1, n_pcs + 1), color=INK_SECONDARY)
