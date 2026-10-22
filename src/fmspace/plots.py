@@ -125,11 +125,11 @@ def grade_ridgeline(score, grades, model, xlim, xlabel="PC1 score (z-score)", bw
         base, d = g * h, densities[g]
         shown = d > 0.003 * d.max()  # 只画密度不为 0 的部分
         ax.axhline(base, color=color, alpha=0.35, linewidth=0.8, zorder=1)
-        ax.vlines(ticks, base - 0.08 * h, base, color=color, alpha=0.6, linewidth=0.9, zorder=1)  # 每行都画刻度
+        ax.vlines(ticks, base - 0.08 * h, base, color=color, alpha=0.6, linewidth=0.8, zorder=1)  # 每行都画刻度
         ax.fill_between(x, base, base + d, where=shown, color=color, alpha=fill_alpha, linewidth=0, zorder=2)
-        ax.plot(x, np.where(shown, base + d, np.nan), color=color, linewidth=1.4, zorder=3)
+        ax.plot(x, np.where(shown, base + d, np.nan), color=color, linewidth=0.8, zorder=3)
         median = np.median(score[grades == g])
-        ax.plot([median, median], [base, base + kdes[g](median)[0]], color=color, linewidth=1.2, linestyle=(0, (3, 2)), zorder=3)
+        ax.plot([median, median], [base, base + kdes[g](median)[0]], color=color, linewidth=0.8, linestyle=(0, (3, 2)), zorder=3)
         label_y = base + 0.31 * h
         ax.text(-0.015, label_y, f"DR {g}", transform=ax.get_yaxis_transform(), ha="right", va="bottom", color=INK)
         ax.text(-0.015, label_y, f"n = {(grades == g).sum()}", transform=ax.get_yaxis_transform(), ha="right", va="top",
