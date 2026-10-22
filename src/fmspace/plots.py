@@ -98,7 +98,7 @@ def _end_labels(ax, x, ends, min_gap):
 
 
 def variance_curve(variance, models, n_pcs=50):
-    """各模型前 n_pcs 个 PC 的累计解释方差（%），纵轴为对数刻度。"""
+    """各模型前 n_pcs 个 PC 的累计解释方差（%），横轴和纵轴都是对数刻度。"""
     fig, ax = plt.subplots(figsize=(6.5, 3.6), facecolor=SURFACE)
     ends = []
     for m in models:
@@ -107,8 +107,10 @@ def variance_curve(variance, models, n_pcs=50):
         ax.plot(d["component"], y, color=MODEL_COLORS[m], linewidth=2, label=MODEL_NAMES[m])
         ends.append((y[-1], MODEL_NAMES[m]))
 
+    ax.set_xscale("log")
     ax.set_xlim(1, n_pcs)
-    ax.set_xticks([1, *range(10, n_pcs + 1, 10)])
+    ticks = [t for t in (1, 2, 5, 10, 20, 50, 100) if t <= n_pcs]
+    ax.set_xticks(ticks, ticks)
     ax.set_yscale("log")
     ax.set_ylim(10, 100)
     ax.set_yticks([10, 20, 30, 50, 70, 100], [10, 20, 30, 50, 70, 100])
