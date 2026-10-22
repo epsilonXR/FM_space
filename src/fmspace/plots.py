@@ -140,8 +140,10 @@ def grade_ridgeline(score, grades, model, xlim, xlabel="PC1 score (z-score)", bw
     ax.set_xlim(*xlim)
     ax.set_ylim(0, (len(densities) - 1) * h + 1.05 * max(d.max() for d in densities))
     ax.set_yticks([])
-    ax.spines[:].set_visible(False)
-    ax.tick_params(colors=INK_SECONDARY, length=0)
+    ax.spines[["top", "right", "left"]].set_visible(False)
+    ax.spines["bottom"].set_color(AXIS)
+    ax.spines["bottom"].set_position(("outward", 4))
+    ax.tick_params(colors=INK_SECONDARY, length=3, color=AXIS)
     ax.set_xlabel(xlabel, color=INK_SECONDARY)
     ax.set_title(MODEL_NAMES[model], loc="left", color=INK, fontweight="bold")
     return fig
