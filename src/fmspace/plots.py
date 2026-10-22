@@ -82,29 +82,15 @@ def _style(ax):
     ax.set_axisbelow(True)
 
 
-def _end_labels(ax, x, ends, min_gap):
-    """在线的右端标模型名：按末端的值排序、互相至少隔 min_gap，用细线连到末端。"""
-    ends = sorted(ends)
-    ys = []
-    for y, _ in ends:
-        ys.append(max(y, ys[-1] + min_gap) if ys else y)
-    shift = np.mean([y for y, _ in ends]) - np.mean(ys)
-    for (y, text), y_label in zip(ends, ys):
-        ax.annotate(text, xy=(x, y), xytext=(x * 1.04, y_label + shift), textcoords="data", va="center",
-                    color=INK, annotation_clip=False, arrowprops={"arrowstyle": "-", "color": AXIS, "lw": 0.6})
-
-
 def variance_curve(variance, models, n_pcs=50, mark=20):
     """各模型前 n_pcs 个 PC 的累计解释方差（%）。在 PC mark 处画竖线，图例里给出各模型到这里的累计值。"""
     fig, ax = plt.subplots(figsize=(6.5, 3.6), facecolor=SURFACE)
     ax.axvline(mark, color=AXIS, linestyle="--", linewidth=1, zorder=1)
-    ends = []
     for m in models:
         d = variance[(variance["model"] == m) & (variance["component"] <= n_pcs)]
         y = 100 * d["ratio"].cumsum().to_numpy()
         ax.plot(d["component"], y, color=MODEL_COLORS[m], linewidth=2, label=f"{MODEL_NAMES[m]}  {y[mark - 1]:.1f}%")
         ax.plot(mark, y[mark - 1], "o", color=MODEL_COLORS[m], markersize=7, markeredgecolor=SURFACE, markeredgewidth=1.5, zorder=3)
-        ends.append((y[-1], MODEL_NAMES[m]))
 
     ax.set_xlim(1, n_pcs)
     ax.set_ylim(0, 100)
@@ -112,7 +98,6 @@ def variance_curve(variance, models, n_pcs=50, mark=20):
     ax.set_xlabel("Principal component", color=INK_SECONDARY)
     ax.set_ylabel("Cumulative explained variance (%)", color=INK_SECONDARY)
     _style(ax)
-    _end_labels(ax, n_pcs, ends, min_gap=6)
     legend = ax.legend(frameon=False, loc="lower right", labelcolor=INK, title=f"Cumulative at PC {mark}")
     legend.get_title().set_color(INK_SECONDARY)
     return fig
