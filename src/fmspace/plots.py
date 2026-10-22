@@ -33,7 +33,7 @@ def heatmap(assoc, model, labels, n_pcs=20):
         values = table.loc[block].to_numpy()
         image = ax.imshow(values, aspect="auto", vmin=0, vmax=1)
         for (i, j), v in np.ndenumerate(values):
-            ax.text(j, i, f"{v:.2f}", ha="center", va="center", fontsize=7, color="black" if v > 0.55 else "white")
+            ax.text(j, i, f"{v:.2f}", ha="center", va="center", fontsize=9, color="black" if v > 0.55 else "white")
         ax.set_yticks(range(len(block)), [LABEL_NAMES[l] for l in block])
         ax.set_xticks(range(n_pcs), range(1, n_pcs + 1))
         ax.tick_params(length=0)
