@@ -3,6 +3,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import LinearSegmentedColormap, to_rgb
+from scipy.stats import gaussian_kde
 
 MODEL_NAMES = {"siglip": "SigLIP", "medsiglip": "MedSigLIP", "conceptclip": "ConceptCLIP", "flair": "FLAIR"}
 LABEL_NAMES = {
@@ -100,4 +101,31 @@ def variance_curve(variance, models, n_pcs=50, mark=20):
     _style(ax)
     legend = ax.legend(frameon=False, loc="lower right", labelcolor=INK, title=f"Cumulative at PC {mark}")
     legend.get_title().set_color(INK_SECONDARY)
+    return fig
+
+
+# DR 等级是有序的：同一色相由浅到深（已通过 validate_palette --ordinal）
+GRADE_COLORS = ["#86b6ef", "#5598e7", "#2a78d6", "#1c5cab", "#0d366b"]
+
+
+def grade_kde(score, grades, model, xlim, xlabel="PC1 score (z-score)", bw=0.35):
+    """各 DR 等级在一维分数上的 KDE，按各等级的张数加权（曲线下面积 = 该等级的比例）。"""
+    x = np.linspace(*xlim, 500)
+    fig, ax = plt.subplots(figsize=(8, 3), facecolor=SURFACE)
+    ax.axvline(0, color=AXIS, linestyle="--", linewidth=1, zorder=1)
+    for g, color in enumerate(GRADE_COLORS):
+        values = score[grades == g]
+        density = gaussian_kde(values, bw_method=bw)(x) * len(values) / len(score)
+        ax.plot(x, density, color=color, linewidth=2, label=f"DR {g}")
+        ax.fill_between(x, density, color=color, alpha=0.12, linewidth=0)
+
+    ax.set_xlim(*xlim)
+    ax.set_ylim(0, None)
+    ax.set_yticks([])
+    ax.set_xlabel(xlabel, color=INK_SECONDARY)
+    ax.spines[["top", "right", "left"]].set_visible(False)
+    ax.spines["bottom"].set_color(AXIS)
+    ax.tick_params(colors=INK_SECONDARY, length=0)
+    ax.set_title(MODEL_NAMES[model], loc="left", color=INK, fontweight="bold")
+    ax.legend(frameon=False, loc="upper left", bbox_to_anchor=(1.01, 1), labelcolor=INK)
     return fig

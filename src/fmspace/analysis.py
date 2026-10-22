@@ -18,6 +18,12 @@ def rho(a, b):
     return spearmanr(a, b)[0]
 
 
+def zscore(score, y=None):
+    """标准化为均值 0、标准差 1；给出 y 时把方向调成与 y 正相关（PC 的正负号是任意的）。"""
+    z = (score - score.mean()) / score.std()
+    return -z if y is not None and rho(z, y) < 0 else z
+
+
 def pca(X, n_components=50):
     return PCA(n_components=n_components, svd_solver="full").fit(X)
 
