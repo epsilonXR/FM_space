@@ -116,7 +116,7 @@ GRADE_STYLES = [
 
 
 def grade_ridgeline(score, grades, model, xlim, xlabel="PC1 score (z-score)", bw=0.35, step=0.55):
-    """各 DR 等级在一维分数上的 KDE，画成山脊图：每个等级一行、各自归一化，竖线为中位数，0 处虚线为数据集均值。
+    """各 DR 等级在一维分数上的 KDE，画成山脊图：每个等级一行、各自归一化，彩色虚线为中位数，0 处灰色虚线为数据集均值。
     step 为行距（相对最高峰），小于 1 时相邻两行略有重叠。"""
     x = np.linspace(*xlim, 500)
     kdes = [gaussian_kde(score[grades == g], bw_method=bw) for g in range(len(GRADE_STYLES))]
@@ -126,13 +126,12 @@ def grade_ridgeline(score, grades, model, xlim, xlabel="PC1 score (z-score)", bw
     fig, ax = plt.subplots(figsize=(7, 3.8), facecolor=SURFACE)
     ax.axvline(0, color=AXIS, linewidth=0.8, linestyle="--", zorder=0)
 
-    for g in reversed(range(len(densities))):  # 下面的行画在前面，盖住上一行的底部
+    for g in reversed(range(len(densities))):
         color, _ = GRADE_STYLES[g]
         base, curve, z = g * h, g * h + densities[g], 10 * (len(densities) - g)
-        ax.fill_between(x, base, curve, color=color, alpha=0.15, linewidth=0, zorder=z)
-        ax.plot(x, curve, color=color, linewidth=0.9, zorder=z + 2)
+        ax.plot(x, curve, color=color, linewidth=0.9, zorder=z)
         median = np.median(score[grades == g])
-        ax.plot([median, median], [base, base + kdes[g](median)[0]], color=color, linewidth=0.9, zorder=z + 2)
+        ax.plot([median, median], [base, base + kdes[g](median)[0]], color=color, linewidth=0.9, linestyle=(0, (3, 2)), zorder=z)
         ax.text(-0.01, base + 0.1 * h, f"DR {g}", transform=ax.get_yaxis_transform(), ha="right", va="bottom",
                 color=INK, fontweight="bold")
         ax.text(xlim[1], base + 0.1 * h, f"n = {(grades == g).sum()}", ha="right", va="bottom",
