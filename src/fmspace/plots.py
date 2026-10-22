@@ -51,6 +51,8 @@ def heatmap(assoc, model, labels, n_pcs=20):
             ax.text(j + 0.5, i + 0.5, text, ha="center", va="center", fontsize=11, color=color)
         ax.invert_yaxis()
         ax.set_yticks(np.arange(len(block)) + 0.5, [LABEL_NAMES[l] for l in block], color=INK)
+        for tick, label in zip(ax.get_yticklabels(), block):
+            tick.set_fontweight("bold" if label == "eye_dr_level" else "normal")
         ax.set_xticks(np.arange(n_pcs) + 0.5, range(1, n_pcs + 1), color=INK_SECONDARY)
         ax.tick_params(length=0)
         ax.spines[:].set_visible(False)
