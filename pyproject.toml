@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fmspace"
+version = "0.1.0"
+requires-python = ">=3.11"
+# torch / torchvision 先按 README 单独安装，以便选对 CUDA 版本
+dependencies = [
+    "torch",
+    "torchvision",
+    "transformers==5.16.1",  # 与已有特征提取时的版本一致
+    "open_clip_torch",
+    "timm",
+    "flair @ git+https://github.com/jusiro/FLAIR.git@d6652d53389ff49e5f73efaccf4246e9de88d1a3",
+    "numpy",
+    "pandas",
+    "pillow",
+    "tqdm",
+    "scipy",
+    "scikit-learn",
+    "matplotlib",
+    "ipykernel",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]

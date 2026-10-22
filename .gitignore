@@ -1,0 +1,7 @@
+__pycache__/
+*.egg-info/
+.ipynb_checkpoints/
+
+# 特征由数据生成，不上传
+features/
+*.npz
