@@ -2,7 +2,7 @@
 
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.colors import LinearSegmentedColormap, to_rgb
+from matplotlib.colors import LinearSegmentedColormap, to_rgb, to_rgba
 from scipy.stats import gaussian_kde
 
 MODEL_NAMES = {"siglip": "SigLIP", "medsiglip": "MedSigLIP", "conceptclip": "ConceptCLIP", "flair": "FLAIR"}
@@ -144,4 +144,32 @@ def grade_ridgeline(score, grades, model, xlim, xlabel="PC1 score (z-score)", bw
     ax.tick_params(colors=INK_SECONDARY, length=0, pad=2)
     ax.set_xlabel(xlabel, color=INK_SECONDARY)
     ax.set_title(MODEL_NAMES[model], loc="left", color=INK, fontweight="bold")
+    return fig
+
+
+def grade_boxplot(scores, grades, models, ylabel="PC1 score (z-score)", width=0.15):
+    """每个模型一组、组内各 DR 等级一个箱线图；4 个模型共用纵轴。
+    箱为 25–75% 分位，中线为中位数，须延伸到 1.5 倍四分位距以内；0 处虚线为数据集均值。"""
+    fig, ax = plt.subplots(figsize=(7.5, 3.8), facecolor=SURFACE)
+    ax.axhline(0, color=AXIS, linewidth=0.8, linestyle="--", zorder=0)
+    offsets = (np.arange(len(GRADE_COLORS)) - (len(GRADE_COLORS) - 1) / 2) * width * 1.25
+    for k, m in enumerate(models):
+        for g, color in enumerate(GRADE_COLORS):
+            ax.boxplot(
+                scores[m][grades == g], positions=[k + offsets[g]], widths=width, patch_artist=True,
+                boxprops={"facecolor": to_rgba(color, 0.18), "edgecolor": color, "linewidth": 0.8},
+                medianprops={"color": color, "linewidth": 1.6},
+                whiskerprops={"color": color, "linewidth": 0.8},
+                capprops={"color": color, "linewidth": 0.8},
+                flierprops={"marker": "o", "markersize": 2, "markerfacecolor": to_rgba(color, 0.5), "markeredgecolor": "none"},
+            )
+    for g, color in enumerate(GRADE_COLORS):
+        ax.plot([], [], color=to_rgba(color, 0.5), linewidth=6, label=f"DR {g}")
+
+    ax.set_xticks(range(len(models)), [MODEL_NAMES[m] for m in models])
+    ax.set_xlim(-0.6, len(models) - 0.4)
+    ax.set_ylabel(ylabel, color=INK_SECONDARY)
+    _style(ax)
+    ax.tick_params(axis="x", colors=INK)
+    ax.legend(frameon=False, loc="upper left", bbox_to_anchor=(1.01, 1), labelcolor=INK)
     return fig
