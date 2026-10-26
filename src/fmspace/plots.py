@@ -145,3 +145,26 @@ def grade_ridgeline(score, grades, model, xlim, xlabel="PC1 score (z-score)", bw
     ax.set_xlabel(xlabel, color=INK_SECONDARY)
     ax.set_title(MODEL_NAMES[model], loc="left", color=INK, fontweight="bold")
     return fig
+
+
+def adjacent_auc_plot(adjacent, models, dodge=0.08):
+    """各模型在相邻等级边界上的 AUC 与 95% 区间；0.5 处虚线表示分不开。"""
+    fig, ax = plt.subplots(figsize=(6.5, 3.6), facecolor=SURFACE)
+    boundaries = list(dict.fromkeys(adjacent["boundary"]))
+    x = np.arange(len(boundaries))
+    ax.axhline(0.5, color=AXIS, linewidth=0.8, linestyle="--", zorder=0)
+    for k, m in enumerate(models):
+        d = adjacent[adjacent["model"] == m].set_index("boundary").loc[boundaries]
+        xs = x + (k - (len(models) - 1) / 2) * dodge
+        ax.plot(xs, d["auc"], color=MODEL_COLORS[m], linewidth=1, zorder=2)
+        ax.errorbar(xs, d["auc"], yerr=[d["auc"] - d["low"], d["high"] - d["auc"]], fmt="o", color=MODEL_COLORS[m],
+                    markersize=5, elinewidth=1, capsize=0, label=MODEL_NAMES[m], zorder=3)
+
+    ax.set_xticks(x, [f"DR {b}" for b in boundaries])
+    ax.set_xlim(-0.4, len(boundaries) - 0.6)
+    ax.set_ylim(0.2, 1)
+    ax.set_xlabel("Adjacent grades", color=INK_SECONDARY)
+    ax.set_ylabel("AUC on PC1", color=INK_SECONDARY)
+    _style(ax)
+    ax.legend(frameon=False, loc="lower left", labelcolor=INK, ncols=2)
+    return fig
