@@ -80,7 +80,7 @@ def rank_axis(X, y, split, n_configs=30, seed=0):
 
 
 def patient_bootstrap(groups, statistic, n_boot=1000, seed=0):
-    """按患者有放回抽样，返回 statistic(index) 的 95% 区间（statistic 返回数组时逐项计算）。"""
+    """按患者有放回抽样，返回 statistic(index) 的 95% 区间。"""
     rng = np.random.default_rng(seed)
     groups = np.asarray(groups)
     patients = np.unique(groups)
@@ -89,7 +89,7 @@ def patient_bootstrap(groups, statistic, n_boot=1000, seed=0):
         statistic(np.concatenate([members[p] for p in rng.choice(patients, len(patients))]))
         for _ in range(n_boot)
     ]
-    return np.percentile(values, [2.5, 97.5], axis=0)
+    return np.percentile(values, [2.5, 97.5])
 
 
 def compare_with_pc1(rank_score, pc1, y, groups):
@@ -103,21 +103,3 @@ def compare_with_pc1(rank_score, pc1, y, groups):
         "diff_low": low,
         "diff_high": high,
     }
-
-
-def adjacent_auc(score, grades, groups, n_boot=1000, seed=0):
-    """相邻等级之间的 AUC（高一级为正类），附患者 bootstrap 95% 区间。score 的方向应与等级正相关。"""
-    score, grades = np.asarray(score), np.asarray(grades)
-    levels = np.unique(grades)
-
-    def aucs(i):
-        s, g = score[i], grades[i]
-        return np.array([roc_auc_score(g[np.isin(g, [a, b])] == b, s[np.isin(g, [a, b])]) for a, b in zip(levels[:-1], levels[1:])])
-
-    low, high = patient_bootstrap(groups, aucs, n_boot, seed)
-    return pd.DataFrame({
-        "boundary": [f"{a}→{b}" for a, b in zip(levels[:-1], levels[1:])],
-        "auc": aucs(np.arange(len(score))),
-        "low": low,
-        "high": high,
-    })
