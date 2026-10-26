@@ -9,7 +9,7 @@ DeepDRiD 上基础模型视觉 embedding 的特征空间分析：模型 → 提�
 | 分析 | `src/fmspace/analysis.py`、`notebooks/analysis.ipynb` | `results/` |
 | 画图 | `src/fmspace/plots.py`、`notebooks/figures.ipynb` | `figures/` |
 
-metadata 和患者划分在 `src/fmspace/data.py`，路径在 `src/fmspace/paths.py`。`analysis.ipynb` 和 `figures.ipynb` 的每个代码格自带 import 和输入，可以单独运行。
+metadata 和患者划分在 `src/fmspace/data.py`，路径在 `src/fmspace/paths.py`。每个 notebook 的第一个代码格是初始化（import、读数据），其余各格只依赖它，顺序随意。
 
 ## 环境
 
@@ -24,7 +24,7 @@ VS Code 的 notebook 内核选 `D:\envs\fmspace\Scripts\python.exe`。
 
 ## 数据
 
-`DATA_DIR` 指向 DeepDRiD 目录（`analysis.ipynb`、`figures.ipynb` 用 `paths.py` 里的，`extract.ipynb` 用第一格里的）：
+`paths.py` 的 `DATA_DIR` 指向 DeepDRiD 目录：
 
 ```text
 DATA_DIR/
