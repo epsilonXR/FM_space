@@ -108,45 +108,6 @@ def variance_curve(variance, models, n_pcs=50, mark=20):
 GRADE_COLORS = ["#4963de", "#088285", "#5d7f00", "#ac5705", "#b63590"]
 
 
-def grade_ridgeline(score, grades, model, xlim, xlabel="PC1 score (z-score)", bw=0.35, step=0.85, fill_alpha=0.1):
-    """各 DR 等级在一维分数上的 KDE，画成山脊图：每个等级一行、各自归一化。
-    彩色虚线为中位数，0 处灰色虚线为数据集均值。每行的基线与填充同色。
-    step 为行距（相对最高峰）；fill_alpha = 0 时不填充。"""
-    x = np.linspace(*xlim, 500)
-    kdes = [gaussian_kde(score[grades == g], bw_method=bw) for g in range(len(GRADE_COLORS))]
-    densities = [k(x) for k in kdes]
-    peak = max(d.max() for d in densities)
-    h = step * peak
-
-    ticks = np.arange(np.ceil(xlim[0]), np.floor(xlim[1]) + 1)
-    fig, ax = plt.subplots(figsize=(7, 4.2), facecolor=SURFACE)
-    ax.axvline(0, color=AXIS, linewidth=0.8, linestyle="--", zorder=0)
-    for g, color in enumerate(GRADE_COLORS):
-        base, d = g * h, densities[g]
-        shown = d > 0.003 * d.max()  # 只画密度不为 0 的部分
-        ax.axhline(base, color=color, alpha=0.35, linewidth=0.8, zorder=1)
-        ax.vlines(ticks, base - 0.08 * h, base, color=color, alpha=0.6, linewidth=0.8, zorder=1)  # 每行都画刻度
-        ax.fill_between(x, base, base + d, where=shown, color=color, alpha=fill_alpha, linewidth=0, zorder=2)
-        ax.plot(x, np.where(shown, base + d, np.nan), color=color, linewidth=0.8, zorder=3)
-        median = np.median(score[grades == g])
-        ax.plot([median, median], [base, base + kdes[g](median)[0]], color=color, linewidth=0.8, linestyle=(0, (3, 2)), zorder=3)
-        ax.plot(median, base, "o", color=color, markersize=4, markeredgewidth=0, zorder=4)  # 中位数与基线的交点
-        label_y = base + 0.31 * h
-        ax.text(-0.015, label_y, f"DR {g}", transform=ax.get_yaxis_transform(), ha="right", va="bottom", color=INK)
-        ax.text(-0.015, label_y, f"n = {(grades == g).sum()}", transform=ax.get_yaxis_transform(), ha="right", va="top",
-                color=INK_SECONDARY, fontsize=8)
-
-    ax.set_xlim(*xlim)
-    ax.set_ylim(-0.08 * h, (len(densities) - 1) * h + 1.05 * peak)
-    ax.set_xticks(ticks, [f"{t:g}" for t in ticks])  # 数字只标在最下面（DR 0）一行
-    ax.set_yticks([])
-    ax.spines[:].set_visible(False)
-    ax.tick_params(colors=INK_SECONDARY, length=0, pad=2)
-    ax.set_xlabel(xlabel, color=INK_SECONDARY)
-    ax.set_title(MODEL_NAMES[model], loc="left", color=INK, fontweight="bold")
-    return fig
-
-
 def grade_boxplot(scores, grades, models, ylabel="PC1 score (z-score)", width=0.15):
     """每个模型一组、组内各 DR 等级一个箱线图；4 个模型共用纵轴。
     箱为 25–75% 分位，中线为中位数，须延伸到 1.5 倍四分位距以内；0 处虚线为数据集均值。"""
