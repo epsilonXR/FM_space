@@ -28,6 +28,18 @@ def pca(X, n_components=50):
     return PCA(n_components=n_components, svd_solver="full").fit(X)
 
 
+def variance_spectrum(X):
+    """全部主成分的贡献率，从大到小（不截断到 50 个）。"""
+    lam = np.clip(np.linalg.eigvalsh(np.cov(X, rowvar=False))[::-1], 0, None)
+    return lam / lam.sum()
+
+
+def effective_rank(ratio):
+    """有效秩（Roy & Vetterli, 2007）：把贡献率当成概率分布，取熵的指数。"""
+    p = ratio[ratio > 0]
+    return np.exp(-(p * np.log(p)).sum())
+
+
 def mean_cosine(X):
     """L2 归一化后的特征里，任意两张不同图像之间余弦相似度的平均（越接近 1 越集中）。"""
     n = len(X)
