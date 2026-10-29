@@ -28,6 +28,12 @@ def pca(X, n_components=50):
     return PCA(n_components=n_components, svd_solver="full").fit(X)
 
 
+def mean_cosine(X):
+    """L2 归一化后的特征里，任意两张不同图像之间余弦相似度的平均（越接近 1 越集中）。"""
+    n = len(X)
+    return (np.sum(X.sum(axis=0) ** 2) - n) / (n * (n - 1))
+
+
 def association(scores, metadata, labels=LABELS):
     """每个 PC 与每个标签的关联：ordinal 用 Spearman，binary 用 AUROC（正类为排序后的第二个值）。"""
     rows = []
