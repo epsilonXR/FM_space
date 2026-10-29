@@ -107,6 +107,11 @@ def variance_curve(variance, models, n_pcs=50, mark=20):
 GRADE_COLORS = ["#4963de", "#088285", "#5d7f00", "#ac5705", "#b63590"]
 
 
+def _grade_handles():
+    """DR 等级的图例（实心圆点），箱线图和散点图共用。"""
+    return [plt.Line2D([], [], ls="", marker="o", ms=6, color=c, label=f"DR {g}") for g, c in enumerate(GRADE_COLORS)]
+
+
 def grade_boxplot(scores, grades, models, ylabel="PC1 score (z-score)", width=0.15):
     """每个模型一组、组内各 DR 等级一个箱线图；4 个模型共用纵轴。
     箱为 25–75% 分位，中线为中位数，须延伸到 1.5 倍四分位距以内；0 处虚线为数据集均值。"""
@@ -123,15 +128,12 @@ def grade_boxplot(scores, grades, models, ylabel="PC1 score (z-score)", width=0.
                 capprops={"color": color, "linewidth": 0.8},
                 flierprops={"marker": "o", "markersize": 2, "markerfacecolor": to_rgba(color, 0.5), "markeredgecolor": "none"},
             )
-    for g, color in enumerate(GRADE_COLORS):
-        ax.plot([], [], color=to_rgba(color, 0.5), linewidth=6, label=f"DR {g}")
-
     ax.set_xticks(range(len(models)), [MODEL_NAMES[m] for m in models])
     ax.set_xlim(-0.6, len(models) - 0.4)
     ax.set_ylabel(ylabel, color=INK_SECONDARY)
     _style(ax)
     ax.tick_params(axis="x", colors=INK)
-    ax.legend(frameon=False, loc="upper left", bbox_to_anchor=(1.01, 1), labelcolor=INK)
+    ax.legend(handles=_grade_handles(), frameon=False, loc="upper left", bbox_to_anchor=(1.01, 1), labelcolor=INK, handletextpad=0.3)
     return fig
 
 
@@ -154,8 +156,7 @@ def pc_scatter(scores, ratios, grades, eyes, models, size=9):
         ax.set_xlabel(f"PC1 ({ratios[m][0]:.1%})", color=INK_SECONDARY)
         ax.set_ylabel(f"PC2 ({ratios[m][1]:.1%})", color=INK_SECONDARY)
         ax.set_title(MODEL_NAMES[m], loc="left", color=INK, fontweight="bold")
-    handles = [plt.Line2D([], [], ls="", marker="o", ms=6, color=c, label=f"DR {g}") for g, c in enumerate(GRADE_COLORS)]
-    handles += [plt.Line2D([], [], ls="", marker="o", ms=6, color=INK_SECONDARY, label="Left eye"),
+    handles = _grade_handles() + [plt.Line2D([], [], ls="", marker="o", ms=6, color=INK_SECONDARY, label="Left eye"),
                 plt.Line2D([], [], ls="", marker="o", ms=6, mfc="none", mec=INK_SECONDARY, label="Right eye")]
     axes[0, -1].legend(handles=handles, frameon=False, loc="upper left", bbox_to_anchor=(1.02, 1), labelcolor=INK, handletextpad=0.3)
     return fig
