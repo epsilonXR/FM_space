@@ -143,7 +143,7 @@ def pc_scatter(scores, ratios, grades, eyes, models, ncols=2, size=9):
     right = eyes == "R"
     order = np.random.default_rng(0).permutation(len(grades))  # 随机绘制顺序，避免某个等级总压在上面
     nrows = -(-len(models) // ncols)
-    fig, axes = plt.subplots(nrows, ncols, squeeze=False, figsize=(2.9 * ncols + 1.0, 3.0 * nrows), facecolor=SURFACE,
+    fig, axes = plt.subplots(nrows, ncols, squeeze=False, figsize=(3.0 * ncols + 1.2, 3.3 * nrows), facecolor=SURFACE,
                              gridspec_kw={"wspace": 0.12, "hspace": 0.3})
     for ax in axes.flat[len(models):]:
         ax.axis("off")
@@ -153,7 +153,8 @@ def pc_scatter(scores, ratios, grades, eyes, models, ncols=2, size=9):
         face = edge.copy()
         face[right, 3] = 0  # 右眼空心
         ax.scatter(*z[order].T, s=size, facecolors=face[order], edgecolors=edge[order], linewidths=0.6)
-        ax.set_aspect("equal", adjustable="datalim")
+        ax.set_box_aspect(1)  # 图框为正方形
+        ax.set_aspect("equal", adjustable="datalim")  # 纵横同比例：扩展坐标范围来适应正方形图框
         ax.set_xticks([]); ax.set_yticks([])
         ax.spines[:].set_color(AXIS)
         ax.set_xlabel(f"PC1 ({ratios[m][0]:.1%})", color=INK_SECONDARY)
