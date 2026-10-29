@@ -3,6 +3,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import LinearSegmentedColormap, to_rgb, to_rgba
+from PIL import Image
 
 MODEL_NAMES = {"siglip": "SigLIP", "medsiglip": "MedSigLIP", "conceptclip": "ConceptCLIP", "flair": "FLAIR"}
 LABEL_NAMES = {
@@ -132,4 +133,28 @@ def grade_boxplot(scores, grades, models, ylabel="PC1 score (z-score)", width=0.
     _style(ax)
     ax.tick_params(axis="x", colors=INK)
     ax.legend(frameon=False, loc="upper left", bbox_to_anchor=(1.01, 1), labelcolor=INK)
+    return fig
+
+
+
+def pc_quantiles(scores, metadata, models, quantiles=(0.05, 0.25, 0.5, 0.75, 0.95), mask=None, size=256):
+    """每个模型一行：在全部图像得分的各分位点上，从 mask 选出的图像里取得分最接近的一张；图下标 DR 等级。"""
+    candidates = np.flatnonzero(np.ones(len(metadata), bool) if mask is None else mask)
+    fig, axes = plt.subplots(len(models), len(quantiles), squeeze=False, facecolor=SURFACE,
+                             figsize=(1.25 * len(quantiles) + 1.2, 1.55 * len(models)), gridspec_kw={"hspace": 0.32, "wspace": 0.06})
+    for row, m in zip(axes, models):
+        s = scores[m]
+        for ax, q in zip(row, np.quantile(s, quantiles)):
+            i = candidates[np.argmin(np.abs(s[candidates] - q))]
+            image = Image.open(metadata["path"].iloc[i])
+            image.thumbnail((size, size))
+            ax.imshow(image)
+            ax.axis("off")
+            g = metadata["eye_dr_level"].iloc[i]
+            ax.text(0.5, -0.04, f"DR {g}", transform=ax.transAxes, ha="center", va="top", fontsize=9, color=GRADE_COLORS[g])
+        row[0].text(-0.12, 0.5, MODEL_NAMES[m], transform=row[0].transAxes, ha="right", va="center", color=INK, fontweight="bold")
+    for ax, q in zip(axes[0], quantiles):
+        ax.set_title(f"{q:.0%}", fontsize=10, color=INK_SECONDARY, pad=4)
+    fig.text(0.5 * (axes[0, 0].get_position().x0 + axes[0, -1].get_position().x1), axes[0, 0].get_position().y1 + 0.05,
+             "Percentile of PC1 score", ha="center", va="bottom", color=INK_SECONDARY)
     return fig
