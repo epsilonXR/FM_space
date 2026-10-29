@@ -137,14 +137,17 @@ def grade_boxplot(scores, grades, models, ylabel="PC1 score (z-score)", width=0.
     return fig
 
 
-def pc_scatter(scores, ratios, grades, eyes, models, size=9):
-    """各模型第 1、2 主成分得分的散点图（纵横同比例）。颜色为 DR 等级，实心为左眼、空心为右眼。
+def pc_scatter(scores, ratios, grades, eyes, models, ncols=2, size=9):
+    """各模型第 1、2 主成分得分的散点图（纵横同比例），每行 ncols 个。颜色为 DR 等级，实心为左眼、空心为右眼。
     主成分的正负号是任意的：PC1 调成与 DR 正相关，PC2 调成右眼为正。"""
     right = eyes == "R"
     order = np.random.default_rng(0).permutation(len(grades))  # 随机绘制顺序，避免某个等级总压在上面
-    fig, axes = plt.subplots(1, len(models), squeeze=False, figsize=(2.9 * len(models) + 1.0, 3.1), facecolor=SURFACE,
-                             gridspec_kw={"wspace": 0.12})
-    for ax, m in zip(axes[0], models):
+    nrows = -(-len(models) // ncols)
+    fig, axes = plt.subplots(nrows, ncols, squeeze=False, figsize=(2.9 * ncols + 1.0, 3.0 * nrows), facecolor=SURFACE,
+                             gridspec_kw={"wspace": 0.12, "hspace": 0.3})
+    for ax in axes.flat[len(models):]:
+        ax.axis("off")
+    for ax, m in zip(axes.flat, models):
         z = scores[m][:, :2] * [np.sign(np.corrcoef(scores[m][:, 0], grades)[0, 1]), np.sign(np.corrcoef(scores[m][:, 1], right)[0, 1])]
         edge = np.array([to_rgba(GRADE_COLORS[g], 0.8) for g in grades])
         face = edge.copy()
