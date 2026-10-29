@@ -3,7 +3,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import LinearSegmentedColormap, to_rgb, to_rgba
-from PIL import Image
 
 MODEL_NAMES = {"siglip": "SigLIP", "medsiglip": "MedSigLIP", "conceptclip": "ConceptCLIP", "flair": "FLAIR"}
 LABEL_NAMES = {
@@ -136,33 +135,27 @@ def grade_boxplot(scores, grades, models, ylabel="PC1 score (z-score)", width=0.
     return fig
 
 
-
-def pc_quantiles(scores, metadata, models, quantiles=(0.05, 0.25, 0.5, 0.75, 0.95), window=0.05, mask=None, size=256):
-    """每个模型一行，对应全部图像得分的各分位点。图下的数字是该分位点前后 window（百分位）内全部图像中占比最高的 DR 等级；
-    图像从同一范围内、属于该等级、且 mask 选出的图像里，取得分最接近分位点的一张。"""
-    grades = metadata["eye_dr_level"].to_numpy()
-    mask = np.ones(len(metadata), bool) if mask is None else mask
-    fig, axes = plt.subplots(len(models), len(quantiles), squeeze=False, facecolor=SURFACE,
-                             figsize=(1.2 * len(quantiles) + 1.2, 1.7 * len(models)), gridspec_kw={"hspace": 0.22, "wspace": 0})
-    for row, m in zip(axes, models):
-        s = scores[m]
-        rank = (np.argsort(np.argsort(s)) + 0.5) / len(s)  # 百分位
-        for ax, q, v in zip(row, quantiles, np.quantile(s, quantiles)):
-            near = np.abs(rank - q) <= window
-            g = int(np.bincount(grades[near], minlength=len(GRADE_COLORS)).argmax())  # 占比最高的等级
-            candidates = np.flatnonzero(near & mask & (grades == g))
-            i = candidates[np.argmin(np.abs(s[candidates] - v))]
-            image = Image.open(metadata["path"].iloc[i])
-            w, h = image.size
-            c = min(w, h)  # 裁成正方形，图像才能无缝拼在一起
-            image = image.crop(((w - c) // 2, (h - c) // 2, (w + c) // 2, (h + c) // 2))
-            image.thumbnail((size, size))
-            ax.imshow(image)
-            ax.axis("off")
-            ax.text(0.5, -0.04, str(g), transform=ax.transAxes, ha="center", va="top", fontsize=11, fontweight="bold", color=GRADE_COLORS[g])
-        row[0].text(-0.12, 0.5, MODEL_NAMES[m], transform=row[0].transAxes, ha="right", va="center", color=INK, fontweight="bold")
-    for ax, q in zip(axes[0], quantiles):
-        ax.set_title(f"{q:.0%}", fontsize=10, color=INK_SECONDARY, pad=4)
-    fig.text(0.5 * (axes[0, 0].get_position().x0 + axes[0, -1].get_position().x1), axes[0, 0].get_position().y1 + 0.05,
-             "Percentile of PC1 score", ha="center", va="bottom", color=INK_SECONDARY)
+def pc_scatter(scores, ratios, grades, eyes, models, size=9):
+    """各模型第 1、2 主成分得分的散点图（纵横同比例）。颜色为 DR 等级，实心为左眼、空心为右眼。
+    主成分的正负号是任意的：PC1 调成与 DR 正相关，PC2 调成右眼为正。"""
+    right = eyes == "R"
+    order = np.random.default_rng(0).permutation(len(grades))  # 随机绘制顺序，避免某个等级总压在上面
+    fig, axes = plt.subplots(1, len(models), squeeze=False, figsize=(2.9 * len(models) + 1.0, 3.1), facecolor=SURFACE,
+                             gridspec_kw={"wspace": 0.12})
+    for ax, m in zip(axes[0], models):
+        z = scores[m][:, :2] * [np.sign(np.corrcoef(scores[m][:, 0], grades)[0, 1]), np.sign(np.corrcoef(scores[m][:, 1], right)[0, 1])]
+        edge = np.array([to_rgba(GRADE_COLORS[g], 0.8) for g in grades])
+        face = edge.copy()
+        face[right, 3] = 0  # 右眼空心
+        ax.scatter(*z[order].T, s=size, facecolors=face[order], edgecolors=edge[order], linewidths=0.6)
+        ax.set_aspect("equal", adjustable="datalim")
+        ax.set_xticks([]); ax.set_yticks([])
+        ax.spines[:].set_color(AXIS)
+        ax.set_xlabel(f"PC1 ({ratios[m][0]:.1%})", color=INK_SECONDARY)
+        ax.set_ylabel(f"PC2 ({ratios[m][1]:.1%})", color=INK_SECONDARY)
+        ax.set_title(MODEL_NAMES[m], loc="left", color=INK, fontweight="bold")
+    handles = [plt.Line2D([], [], ls="", marker="o", ms=6, color=c, label=f"DR {g}") for g, c in enumerate(GRADE_COLORS)]
+    handles += [plt.Line2D([], [], ls="", marker="o", ms=6, color=INK_SECONDARY, label="Left eye"),
+                plt.Line2D([], [], ls="", marker="o", ms=6, mfc="none", mec=INK_SECONDARY, label="Right eye")]
+    axes[0, -1].legend(handles=handles, frameon=False, loc="upper left", bbox_to_anchor=(1.02, 1), labelcolor=INK, handletextpad=0.3)
     return fig
