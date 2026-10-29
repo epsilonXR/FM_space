@@ -137,21 +137,27 @@ def grade_boxplot(scores, grades, models, ylabel="PC1 score (z-score)", width=0.
 
 
 
-def pc_quantiles(scores, metadata, models, quantiles=(0.05, 0.25, 0.5, 0.75, 0.95), mask=None, size=256):
-    """每个模型一行：在全部图像得分的各分位点上，从 mask 选出的图像里取得分最接近的一张；图下标 DR 等级。"""
+def pc_quantiles(scores, metadata, models, quantiles=(0.05, 0.25, 0.5, 0.75, 0.95), window=0.05, mask=None, size=256):
+    """每个模型一行：在全部图像得分的各分位点上，从 mask 选出的图像里取得分最接近的一张作为示例；
+    图下标出该分位点前后 window（百分位）内全部图像的中位 DR 等级。"""
+    grades = metadata["eye_dr_level"].to_numpy()
     candidates = np.flatnonzero(np.ones(len(metadata), bool) if mask is None else mask)
     fig, axes = plt.subplots(len(models), len(quantiles), squeeze=False, facecolor=SURFACE,
-                             figsize=(1.25 * len(quantiles) + 1.2, 1.55 * len(models)), gridspec_kw={"hspace": 0.32, "wspace": 0.06})
+                             figsize=(1.2 * len(quantiles) + 1.2, 1.7 * len(models)), gridspec_kw={"hspace": 0.22, "wspace": 0})
     for row, m in zip(axes, models):
         s = scores[m]
-        for ax, q in zip(row, np.quantile(s, quantiles)):
-            i = candidates[np.argmin(np.abs(s[candidates] - q))]
+        rank = (np.argsort(np.argsort(s)) + 0.5) / len(s)  # 百分位
+        for ax, q, v in zip(row, quantiles, np.quantile(s, quantiles)):
+            i = candidates[np.argmin(np.abs(s[candidates] - v))]
             image = Image.open(metadata["path"].iloc[i])
+            w, h = image.size
+            c = min(w, h)  # 裁成正方形，图像才能无缝拼在一起
+            image = image.crop(((w - c) // 2, (h - c) // 2, (w + c) // 2, (h + c) // 2))
             image.thumbnail((size, size))
             ax.imshow(image)
             ax.axis("off")
-            g = metadata["eye_dr_level"].iloc[i]
-            ax.text(0.5, -0.04, f"DR {g}", transform=ax.transAxes, ha="center", va="top", fontsize=9, color=GRADE_COLORS[g])
+            g = int(np.quantile(grades[np.abs(rank - q) <= window], 0.5, method="inverted_cdf"))
+            ax.text(0.5, -0.04, str(g), transform=ax.transAxes, ha="center", va="top", fontsize=11, fontweight="bold", color=GRADE_COLORS[g])
         row[0].text(-0.12, 0.5, MODEL_NAMES[m], transform=row[0].transAxes, ha="right", va="center", color=INK, fontweight="bold")
     for ax, q in zip(axes[0], quantiles):
         ax.set_title(f"{q:.0%}", fontsize=10, color=INK_SECONDARY, pad=4)
