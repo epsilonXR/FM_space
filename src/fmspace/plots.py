@@ -138,8 +138,8 @@ def grade_boxplot(scores, grades, models, ylabel="PC1 score (z-score)", width=0.
 
 
 def pc_quantiles(scores, metadata, models, quantiles=(0.05, 0.25, 0.5, 0.75, 0.95), window=0.05, mask=None, size=256):
-    """每个模型一行，对应全部图像得分的各分位点。图下的数字是该分位点前后 window（百分位）内全部图像的中位 DR 等级；
-    图像从同一范围内、等级等于该中位数、且 mask 选出的图像里，取得分最接近分位点的一张。"""
+    """每个模型一行，对应全部图像得分的各分位点。图下的数字是该分位点前后 window（百分位）内全部图像中占比最高的 DR 等级；
+    图像从同一范围内、属于该等级、且 mask 选出的图像里，取得分最接近分位点的一张。"""
     grades = metadata["eye_dr_level"].to_numpy()
     mask = np.ones(len(metadata), bool) if mask is None else mask
     fig, axes = plt.subplots(len(models), len(quantiles), squeeze=False, facecolor=SURFACE,
@@ -149,7 +149,7 @@ def pc_quantiles(scores, metadata, models, quantiles=(0.05, 0.25, 0.5, 0.75, 0.9
         rank = (np.argsort(np.argsort(s)) + 0.5) / len(s)  # 百分位
         for ax, q, v in zip(row, quantiles, np.quantile(s, quantiles)):
             near = np.abs(rank - q) <= window
-            g = int(np.quantile(grades[near], 0.5, method="inverted_cdf"))
+            g = int(np.bincount(grades[near], minlength=len(GRADE_COLORS)).argmax())  # 占比最高的等级
             candidates = np.flatnonzero(near & mask & (grades == g))
             i = candidates[np.argmin(np.abs(s[candidates] - v))]
             image = Image.open(metadata["path"].iloc[i])
