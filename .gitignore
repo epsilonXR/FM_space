@@ -5,3 +5,6 @@ __pycache__/
 # 特征由数据生成，不上传
 features/
 *.npz
+
+# RISE 显著图由数据生成，不上传
+results/rise/

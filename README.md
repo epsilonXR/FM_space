@@ -8,6 +8,7 @@ DeepDRiD 上基础模型视觉 embedding 的特征空间分析：模型 → 提�
 | 提取特征 | `src/fmspace/extract.py`、`notebooks/extract.ipynb` | `features/<model>.npz`（不进 git） |
 | 分析 | `src/fmspace/analysis.py`、`notebooks/analysis.ipynb` | `results/` |
 | 画图 | `src/fmspace/plots.py`、`notebooks/figures.ipynb` | `figures/` |
+| RISE | `src/fmspace/rise.py`、`notebooks/rise.ipynb` | `results/rise/`（不进 git）、`figures/rise_<model>.png` |
 
 metadata 和患者划分在 `src/fmspace/data.py`，路径在 `src/fmspace/paths.py`。每个 notebook 的第一个代码格是初始化（import、读数据），其余各格只依赖它，顺序随意。
 
