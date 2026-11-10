@@ -167,8 +167,7 @@ def pc_scatter(scores, ratios, grades, eyes, models, ncols=2, size=9):
 
 
 def saliency_figure(images, maps, fovs, row_labels, col_labels, alpha=0.6):
-    """每行一张图：原图 + 各主成分的显著图（叠在灰度原图上，视野圆外不显示）。
-    maps[i] 为 [K, H, W]；红 = 该区域把得分推高，蓝 = 推低；每列共用色标（该列视野内 |值| 的 99% 分位）。"""
+    """每行一张图：原图 + 各主成分的显著图；maps[i] 为 [K, H, W]，每列共用色标。"""
     n, k = len(images), len(col_labels)
     limits = [np.percentile(np.concatenate([np.abs(m[j][f]) for m, f in zip(maps, fovs)]), 99) for j in range(k)]
     fig, axes = plt.subplots(n + 1, k + 1, squeeze=False, figsize=(2.6 * (k + 1), 2.4 * n + 0.6), facecolor=SURFACE,
@@ -179,7 +178,7 @@ def saliency_figure(images, maps, fovs, row_labels, col_labels, alpha=0.6):
         for j in range(k):
             axes[i, j + 1].imshow(image.convert("L"), cmap="gray")
             mesh = axes[i, j + 1].imshow(np.where(fov, m[j], np.nan), cmap="RdBu_r", vmin=-limits[j], vmax=limits[j], alpha=alpha)
-            if i == n - 1:  # 最下面一行放该列的色标
+            if i == n - 1:
                 cbar = fig.colorbar(mesh, cax=axes[n, j + 1], orientation="horizontal", format="%.2g")
                 cbar.outline.set_visible(False)
                 cbar.ax.tick_params(colors=INK_SECONDARY, labelsize=8, length=0)

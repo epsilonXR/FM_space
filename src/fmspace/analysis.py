@@ -29,7 +29,7 @@ def pca(X, n_components=50):
 
 
 def pc_scorer(encode, fitted, components, signs=1):
-    """图像 → 主成分得分 [B, K]。fitted 是拟合好的 PCA（不重新拟合），components 从 1 数，signs 定各主成分的方向。"""
+    """图像 → 主成分得分 [B, K]；components 从 1 数。"""
     index = np.asarray(components) - 1
 
     def score(images):
