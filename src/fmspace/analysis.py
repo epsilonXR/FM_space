@@ -28,6 +28,21 @@ def pca(X, n_components=50):
     return PCA(n_components=n_components, svd_solver="full").fit(X)
 
 
+def pc_scorer(forward, fitted, components, signs):
+    """RISE 用的黑盒：x [n, C, H, W] -> 第 components 个主成分（从 1 数）的得分 [n, K]。
+    fitted 是拟合好的 PCA（不重新拟合）；signs [K] 取 ±1，定各主成分的正方向。"""
+    index = np.asarray(components) - 1
+    mean = torch.as_tensor(fitted.mean_, dtype=torch.float32)
+    directions = torch.as_tensor(fitted.components_[index] * np.asarray(signs)[:, None], dtype=torch.float32)
+
+    def model(x):
+        z = forward(x).float().cpu()
+        z = z / z.norm(dim=1, keepdim=True)
+        return (z - mean) @ directions.T
+
+    return model
+
+
 def variance_spectrum(X):
     """全部主成分的贡献率，从大到小（不截断到 50 个）。"""
     lam = np.clip(np.linalg.eigvalsh(np.cov(X, rowvar=False))[::-1], 0, None)
