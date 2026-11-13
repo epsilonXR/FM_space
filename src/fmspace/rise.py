@@ -1,8 +1,5 @@
 """RISE (Petsiuk et al., BMVC 2018), following the authors' implementation
-(https://github.com/eclique/RISE, explanations.py); variable names are kept the same.
-
-The only difference: scores are centered (mean subtracted) before the weighted sum,
-so that 0 in the saliency map means "no effect" when scores can be negative.
+(https://github.com/eclique/RISE, explanations.py);
 """
 
 import numpy as np
