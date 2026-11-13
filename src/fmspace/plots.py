@@ -164,28 +164,3 @@ def pc_scatter(scores, ratios, grades, eyes, models, ncols=2, size=9):
                 plt.Line2D([], [], ls="", marker="o", ms=6, mfc="none", mec=INK_SECONDARY, label="Right eye")]
     axes[0, -1].legend(handles=handles, frameon=False, loc="upper left", bbox_to_anchor=(1.02, 1), labelcolor=INK, handletextpad=0.3)
     return fig
-
-
-def saliency_figure(images, maps, fovs, row_labels, col_labels, alpha=0.6):
-    """每行一张图：原图 + 各主成分的显著图；maps[i] 为 [K, H, W]，每列共用色标。"""
-    n, k = len(images), len(col_labels)
-    limits = [np.percentile(np.concatenate([np.abs(m[j][f]) for m, f in zip(maps, fovs)]), 99) for j in range(k)]
-    fig, axes = plt.subplots(n + 1, k + 1, squeeze=False, figsize=(2.6 * (k + 1), 2.4 * n + 0.6), facecolor=SURFACE,
-                             gridspec_kw={"height_ratios": [1] * n + [0.05], "wspace": 0.03, "hspace": 0.05})
-    for i, (image, m, fov) in enumerate(zip(images, maps, fovs)):
-        axes[i, 0].imshow(image)
-        axes[i, 0].set_ylabel(row_labels[i], color=INK, fontsize=9)
-        for j in range(k):
-            axes[i, j + 1].imshow(image.convert("L"), cmap="gray")
-            mesh = axes[i, j + 1].imshow(np.where(fov, m[j], np.nan), cmap="RdBu_r", vmin=-limits[j], vmax=limits[j], alpha=alpha)
-            if i == n - 1:
-                cbar = fig.colorbar(mesh, cax=axes[n, j + 1], orientation="horizontal", format="%.2g")
-                cbar.outline.set_visible(False)
-                cbar.ax.tick_params(colors=INK_SECONDARY, labelsize=8, length=0)
-    axes[n, 0].axis("off")
-    for ax, title in zip(axes[0], ["Image", *col_labels]):
-        ax.set_title(title, color=INK, fontweight="bold", fontsize=10)
-    for ax in axes[:n].flat:
-        ax.set_xticks([]); ax.set_yticks([])
-        ax.spines[:].set_visible(False)
-    return fig

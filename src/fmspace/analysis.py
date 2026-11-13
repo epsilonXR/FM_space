@@ -28,18 +28,6 @@ def pca(X, n_components=50):
     return PCA(n_components=n_components, svd_solver="full").fit(X)
 
 
-def pc_scorer(encode, fitted, components, signs=1):
-    """图像 → 主成分得分 [B, K]；components 从 1 数。"""
-    index = np.asarray(components) - 1
-
-    def score(images):
-        with torch.inference_mode():
-            z = encode(images).float().cpu().numpy()
-        return fitted.transform(l2(z))[:, index] * signs
-
-    return score
-
-
 def variance_spectrum(X):
     """全部主成分的贡献率，从大到小（不截断到 50 个）。"""
     lam = np.clip(np.linalg.eigvalsh(np.cov(X, rowvar=False))[::-1], 0, None)
