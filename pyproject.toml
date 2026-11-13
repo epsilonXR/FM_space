@@ -20,6 +20,7 @@ dependencies = [
     "tqdm",
     "scipy",
     "scikit-learn",
+    "scikit-image",
     "matplotlib",
     "ipykernel",
 ]
