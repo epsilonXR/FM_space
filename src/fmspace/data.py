@@ -1,8 +1,9 @@
 """DeepDRiD regular-fundus-training：metadata 与患者划分。
 
-data_dir/
+data_dir = DeepDRiD 官方仓库（github.com/deepdrdoc/DeepDRiD）的根目录，结构不改：
+data_dir/regular_fundus_images/regular-fundus-training/
 ├── regular-fundus-training.csv
-└── regular-fundus-training/Images/<patient_id>/<image_id>.jpg
+└── Images/<patient_id>/<image_id>.jpg
 """
 
 from pathlib import Path
@@ -24,11 +25,11 @@ LABELS = {
 
 def load_metadata(data_dir):
     """眼别取 image_id 末尾的 l/r，DR 等级取该眼的标签；该眼无标签的 11 张排除。"""
-    data_dir = Path(data_dir)
-    raw = pd.read_csv(data_dir / "regular-fundus-training.csv")
+    training = Path(data_dir) / "regular_fundus_images" / "regular-fundus-training"
+    raw = pd.read_csv(training / "regular-fundus-training.csv")
     eye = raw["image_id"].str.extract(r"_([lr])\d+$", expand=False).str.upper()
     level = raw["left_eye_DR_Level"].where(eye == "L", raw["right_eye_DR_Level"])
-    images = data_dir / "regular-fundus-training" / "Images"
+    images = training / "Images"
 
     metadata = pd.DataFrame(
         {

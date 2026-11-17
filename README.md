@@ -24,12 +24,17 @@ VS Code 的 notebook 内核选 `D:\envs\fmspace\Scripts\python.exe`。
 
 ## 数据
 
-`paths.py` 的 `DATA_DIR` 指向 DeepDRiD 目录：
+DeepDRiD 官方仓库原样下载，结构不改。`paths.py` 的 `DATA_DIR` 指向下载下来的 `DeepDRiD` 文件夹：
+
+```bash
+mkdir -p ~/data && cd ~/data
+git clone --depth 1 https://github.com/deepdrdoc/DeepDRiD.git
+```
 
 ```text
-DATA_DIR/
+DATA_DIR/regular_fundus_images/regular-fundus-training/
 ├── regular-fundus-training.csv
-└── regular-fundus-training/Images/<patient_id>/<image_id>.jpg
+└── Images/<patient_id>/<image_id>.jpg
 ```
 
 ## 模型
