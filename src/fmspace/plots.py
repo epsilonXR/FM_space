@@ -167,10 +167,11 @@ def pc_scatter(scores, ratios, grades, eyes, models, ncols=2, size=9):
     return fig
 
 
-def saliency_figure(images, maps, row_labels, col_labels, alpha=0.9, panel=2.6):
+def saliency_figure(images, maps, row_labels, col_labels, alpha=0.9, levels=(0.25, 0.5), panel=2.6):
     """每行一张图：原图 + 各主成分的显著图（叠在灰度原图上，视野圆外不显示）。
     原图保持原始分辨率，显著图 [K, h, w] 拉伸到原图大小叠加；红 = 推高，蓝 = 推低；
     不透明度随 |值| 增大（接近 0 处透明，露出原图，最大为 alpha）；
+    等高线画在 ±levels × 上限处（红 = 正，蓝 = 负；越靠外越细）；
     每列共用以 0 为中心的色标（视野内 |值| 的 99% 分位）。"""
     n, k = len(images), len(col_labels)
     grays = [np.asarray(im.convert("L")) for im in images]
@@ -189,6 +190,12 @@ def saliency_figure(images, maps, row_labels, col_labels, alpha=0.9, panel=2.6):
             rgba[..., 3] = alpha * np.clip(np.abs(m[j]) / limits[j], 0, 1) * fov
             axes[i, j + 1].imshow(gray, cmap="gray", interpolation="none")
             axes[i, j + 1].imshow(rgba, extent=extent, interpolation="bilinear")
+            h, w = m[j].shape
+            x, y = (np.arange(w) + 0.5) * image.width / w, (np.arange(h) + 0.5) * image.height / h
+            widths = np.linspace(0.4, 0.8, len(levels))
+            for sign, color in [(1, "#b2182b"), (-1, "#2166ac")]:
+                axes[i, j + 1].contour(x, y, np.where(fov, sign * m[j], np.nan), levels=np.asarray(levels) * limits[j],
+                                       colors=color, linewidths=widths)
             if i == n - 1:
                 cbar = fig.colorbar(mesh, cax=axes[n, j + 1], orientation="horizontal", format="%.2g")
                 cbar.outline.set_visible(False)
