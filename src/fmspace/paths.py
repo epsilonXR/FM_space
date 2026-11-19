@@ -8,3 +8,4 @@ OLD_FEATURE_DIR = Path(r"C:\M1\SAMIT\project\SAMIT\features\DeepDRiD")  # 旧仓
 FEATURE_DIR = ROOT / "features"
 RESULT_DIR = ROOT / "results"
 FIGURE_DIR = ROOT / "figures"
+RISE_DIR = RESULT_DIR / "rise"
