@@ -27,7 +27,7 @@ VS Code 的 notebook 内核选 `D:\envs\fmspace\Scripts\python.exe`。
 DeepDRiD 官方仓库原样下载，结构不改。`paths.py` 的 `DATA_DIR` 指向下载下来的 `DeepDRiD` 文件夹：
 
 ```bash
-mkdir -p ~/data && cd ~/data
+mkdir -p ~/workspace/WZX/DataSet && cd ~/workspace/WZX/DataSet
 git clone --depth 1 https://github.com/deepdrdoc/DeepDRiD.git
 ```
 
