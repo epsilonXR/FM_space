@@ -94,3 +94,16 @@ def rise_shapley(model, x, baseline, N=16000, s=14, gpu_batch=32, seed=0):
 
     CL = p.size(1)
     return (sal / N).view((CL, H, W))
+
+
+def field_of_view(image, size, threshold=10):
+    """Field-of-view mask [1, h, w] of a fundus PIL image (gray > threshold), resized to size = (h, w); 1 = inside."""
+    gray = np.asarray(image.convert("L").resize(size[::-1]))
+    return torch.from_numpy(gray > threshold).float()[None]
+
+
+def fov_blur(x, fov, sigma):
+    """Gaussian blur inside the field of view only (normalized convolution), so the black border does not
+    leak in; outside the field of view the image is kept. x: [n, C, H, W]; fov: [n, 1, H, W]."""
+    blurred = gaussian_blur(x * fov, sigma) / gaussian_blur(fov, sigma)
+    return torch.where(fov.bool(), blurred, x)
