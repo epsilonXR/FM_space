@@ -167,12 +167,11 @@ def pc_scatter(scores, ratios, grades, eyes, models, ncols=2, size=9):
     return fig
 
 
-def saliency_figure(images, maps, row_labels, col_labels, alpha=0.9, contrast=2, panel=2.6):
+def saliency_figure(images, maps, row_labels, col_labels, alpha=0.9, panel=2.6):
     """每行一张图：原图 + 各主成分的显著图（叠在灰度原图上，视野圆外不显示）。
     原图保持原始分辨率，显著图 [K, h, w] 拉伸到原图大小叠加；红 = 推高，蓝 = 推低；
-    值先按 u = tanh(contrast · 值 / 上限) / tanh(contrast) 平滑压缩（0 附近线性，中等的值抬高，大的值渐近饱和），
-    颜色取 u，不透明度 = alpha · |u|（接近 0 处透明，露出原图）；
-    每列共用以 0 为中心的色标，上限为视野内 |值| 的 99% 分位。"""
+    不透明度随 |值| 增大（接近 0 处透明，露出原图，最大为 alpha）；
+    每列共用以 0 为中心的色标（视野内 |值| 的 99% 分位）。"""
     n, k = len(images), len(col_labels)
     grays = [np.asarray(im.convert("L")) for im in images]
     fovs = [np.asarray(Image.fromarray(g).resize(m.shape[:0:-1])) > 10 for g, m in zip(grays, maps)]
@@ -185,17 +184,13 @@ def saliency_figure(images, maps, row_labels, col_labels, alpha=0.9, contrast=2,
         axes[i, 0].imshow(image, interpolation="none")
         axes[i, 0].set_ylabel(row_labels[i], color=INK, fontsize=9)
         for j in range(k):
-            u = np.tanh(contrast * m[j] / limits[j]) / np.tanh(contrast)
-            rgba = plt.get_cmap("RdBu_r")((u + 1) / 2)
-            rgba[..., 3] = alpha * np.clip(np.abs(u), 0, 1) * fov
+            mesh = plt.cm.ScalarMappable(plt.Normalize(-limits[j], limits[j]), "RdBu_r")
+            rgba = mesh.to_rgba(m[j])
+            rgba[..., 3] = alpha * np.clip(np.abs(m[j]) / limits[j], 0, 1) * fov
             axes[i, j + 1].imshow(gray, cmap="gray", interpolation="none")
             axes[i, j + 1].imshow(rgba, extent=extent, interpolation="bilinear")
             if i == n - 1:
-                ticks = np.array([-0.5, -0.15, 0, 0.15, 0.5]) * limits[j]
-                mesh = plt.cm.ScalarMappable(plt.Normalize(-1, 1), "RdBu_r")
-                cbar = fig.colorbar(mesh, cax=axes[n, j + 1], orientation="horizontal",
-                                    ticks=np.tanh(contrast * ticks / limits[j]) / np.tanh(contrast))
-                cbar.set_ticklabels([f"{t:.2g}" for t in ticks])
+                cbar = fig.colorbar(mesh, cax=axes[n, j + 1], orientation="horizontal", format="%.2g")
                 cbar.outline.set_visible(False)
                 cbar.ax.tick_params(colors=INK_SECONDARY, labelsize=8, length=0)
     axes[n, 0].axis("off")
