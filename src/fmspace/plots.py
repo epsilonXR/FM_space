@@ -167,10 +167,10 @@ def pc_scatter(scores, ratios, grades, eyes, models, ncols=2, size=9):
     return fig
 
 
-def saliency_figure(images, maps, row_labels, col_labels, alpha=0.9, panel=2.6):
+def saliency_figure(images, maps, row_labels, col_labels, alpha=0.9, gamma=0.5, panel=2.6):
     """每行一张图：原图 + 各主成分的显著图（叠在灰度原图上，视野圆外不显示）。
     原图保持原始分辨率，显著图 [K, h, w] 拉伸到原图大小叠加；红 = 推高，蓝 = 推低；
-    不透明度随 |值| 增大（接近 0 处透明，露出原图，最大为 alpha）；
+    不透明度 = alpha · (|值| / 色标上限)^gamma（接近 0 处透明，露出原图；gamma 越小，中等的值越明显）；
     每列共用以 0 为中心的色标（视野内 |值| 的 99% 分位）。"""
     n, k = len(images), len(col_labels)
     grays = [np.asarray(im.convert("L")) for im in images]
@@ -186,7 +186,7 @@ def saliency_figure(images, maps, row_labels, col_labels, alpha=0.9, panel=2.6):
         for j in range(k):
             mesh = plt.cm.ScalarMappable(plt.Normalize(-limits[j], limits[j]), "RdBu_r")
             rgba = mesh.to_rgba(m[j])
-            rgba[..., 3] = alpha * np.clip(np.abs(m[j]) / limits[j], 0, 1) * fov
+            rgba[..., 3] = alpha * np.clip(np.abs(m[j]) / limits[j], 0, 1) ** gamma * fov
             axes[i, j + 1].imshow(gray, cmap="gray", interpolation="none")
             axes[i, j + 1].imshow(rgba, extent=extent, interpolation="bilinear")
             if i == n - 1:
