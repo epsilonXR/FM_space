@@ -4,6 +4,7 @@
 
 import numpy as np
 import torch
+import torch.nn.functional as F
 from skimage.transform import resize
 from tqdm.auto import tqdm
 
@@ -55,3 +56,41 @@ def rise(model, x, N=4000, s=7, p1=0.5, gpu_batch=32, seed=0):
     sal = sal.view((CL, H, W))
     sal = sal / N / p1
     return sal
+
+
+def gaussian_blur(x, sigma):
+    """Separable Gaussian blur of [n, C, H, W] with reflect padding; sigma in pixels of x."""
+    r = int(3 * sigma)
+    k = torch.exp(-(torch.arange(-r, r + 1, dtype=x.dtype, device=x.device) ** 2) / (2 * sigma**2))
+    k = (k / k.sum()).repeat(x.size(1), 1, 1, 1)
+    x = F.conv2d(F.pad(x, (r, r, 0, 0), mode="reflect"), k, groups=x.size(1))
+    return F.conv2d(F.pad(x, (0, 0, r, r), mode="reflect"), k.transpose(2, 3), groups=x.size(1))
+
+
+@torch.inference_mode()
+def rise_shapley(model, x, baseline, N=16000, s=14, gpu_batch=32, seed=0):
+    """Saliency maps [CL, H, W] that split model(x) - model(baseline) over regions (Shapley values).
+
+    Differences from rise():
+    - masked regions take the baseline image instead of 0;
+    - each mask has its own keep probability q ~ U(0, 1) (Owen's formula: Shapley = Banzhaf averaged over q);
+    - masks are generated per batch and summed on the fly, so memory does not grow with N.
+    sal.sum() / cell_area ≈ model(x) - model(baseline).
+    """
+    _, _, H, W = x.size()
+    rng = np.random.default_rng(seed)
+    q = ((rng.permutation(N) + rng.random(N)) / N).astype("float32")  # stratified U(0, 1)
+    s0, s_ref = model(x).float().cpu(), model(baseline).float().cpu()
+
+    sal = 0
+    for i in tqdm(range(0, N, gpu_batch)):
+        qb = q[i : i + gpu_batch]
+        masks = generate_masks(len(qb), s, qb[:, None, None], (H, W), rng)
+        m = masks.to(x.device)
+        p = model(m * x + (1 - m) * baseline).float().cpu()
+        qb = torch.from_numpy(qb)[:, None]
+        p = p - ((1 - qb) * s_ref + qb * s0)  # centering on the straight line from baseline (q=0) to image (q=1)
+        sal = sal + p.T @ ((masks.view(len(qb), H * W) - qb) / (qb * (1 - qb)))
+
+    CL = p.size(1)
+    return (sal / N).view((CL, H, W))
