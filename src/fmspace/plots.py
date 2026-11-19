@@ -171,11 +171,11 @@ def saliency_figure(images, maps, row_labels, col_labels, alpha=0.9, panel=2.6):
     """每行一张图：原图 + 各主成分的显著图（叠在灰度原图上，视野圆外不显示）。
     原图保持原始分辨率，显著图 [K, h, w] 拉伸到原图大小叠加；红 = 推高，蓝 = 推低；
     不透明度随 |值| 增大（接近 0 处透明，露出原图，最大为 alpha）；
-    每列共用以 0 为中心的色标（视野内 |值| 的 99% 分位）。"""
+    每列共用以 0 为中心的色标（视野内 |值| 的 95% 分位）。"""
     n, k = len(images), len(col_labels)
     grays = [np.asarray(im.convert("L")) for im in images]
     fovs = [np.asarray(Image.fromarray(g).resize(m.shape[:0:-1])) > 10 for g, m in zip(grays, maps)]
-    limits = [np.percentile(np.concatenate([np.abs(m[j][f]) for m, f in zip(maps, fovs)]), 99) for j in range(k)]
+    limits = [np.percentile(np.concatenate([np.abs(m[j][f]) for m, f in zip(maps, fovs)]), 95) for j in range(k)]
 
     fig, axes = plt.subplots(n + 1, k + 1, squeeze=False, figsize=(panel * (k + 1), panel * 0.92 * n + 0.6), facecolor=SURFACE,
                              gridspec_kw={"height_ratios": [1] * n + [0.05], "wspace": 0.03, "hspace": 0.05})
