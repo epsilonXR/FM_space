@@ -166,23 +166,25 @@ def pc_scatter(scores, ratios, grades, eyes, models, ncols=2, size=9):
     return fig
 
 
-def saliency_figure(images, maps, row_labels, col_labels, alpha=0.6):
+def saliency_figure(images, maps, row_labels, col_labels, alpha=0.6, panel=2.6):
     """每行一张图：原图 + 各主成分的显著图（叠在灰度原图上，视野圆外不显示）。
-    maps[i] 为 [K, H, W]；红 = 推高，蓝 = 推低；每列共用以 0 为中心的色标（视野内 |值| 的 99% 分位）。"""
+    原图保持原始分辨率，显著图 [K, h, w] 拉伸到原图大小叠加；红 = 推高，蓝 = 推低；
+    每列共用以 0 为中心的色标（视野内 |值| 的 99% 分位）。"""
     n, k = len(images), len(col_labels)
-    size = maps[0].shape[2], maps[0].shape[1]
-    images = [im.resize(size) for im in images]
-    fovs = [np.asarray(im.convert("L")) > 10 for im in images]
+    grays = [np.asarray(im.convert("L")) for im in images]
+    fovs = [np.asarray(Image.fromarray(g).resize(m.shape[:0:-1])) > 10 for g, m in zip(grays, maps)]
     limits = [np.percentile(np.concatenate([np.abs(m[j][f]) for m, f in zip(maps, fovs)]), 99) for j in range(k)]
 
-    fig, axes = plt.subplots(n + 1, k + 1, squeeze=False, figsize=(2.6 * (k + 1), 2.4 * n + 0.6), facecolor=SURFACE,
+    fig, axes = plt.subplots(n + 1, k + 1, squeeze=False, figsize=(panel * (k + 1), panel * 0.92 * n + 0.6), facecolor=SURFACE,
                              gridspec_kw={"height_ratios": [1] * n + [0.05], "wspace": 0.03, "hspace": 0.05})
-    for i, (image, m, fov) in enumerate(zip(images, maps, fovs)):
-        axes[i, 0].imshow(image)
+    for i, (image, gray, m, fov) in enumerate(zip(images, grays, maps, fovs)):
+        extent = (0, image.width, image.height, 0)
+        axes[i, 0].imshow(image, interpolation="none")
         axes[i, 0].set_ylabel(row_labels[i], color=INK, fontsize=9)
         for j in range(k):
-            axes[i, j + 1].imshow(image.convert("L"), cmap="gray")
-            mesh = axes[i, j + 1].imshow(np.where(fov, m[j], np.nan), cmap="RdBu_r", vmin=-limits[j], vmax=limits[j], alpha=alpha)
+            axes[i, j + 1].imshow(gray, cmap="gray", interpolation="none")
+            mesh = axes[i, j + 1].imshow(np.where(fov, m[j], np.nan), cmap="RdBu_r", vmin=-limits[j], vmax=limits[j],
+                                         alpha=alpha, extent=extent, interpolation="bilinear")
             if i == n - 1:
                 cbar = fig.colorbar(mesh, cax=axes[n, j + 1], orientation="horizontal", format="%.2g")
                 cbar.outline.set_visible(False)
