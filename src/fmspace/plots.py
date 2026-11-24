@@ -29,39 +29,54 @@ def _text_color(rgb):
     return "white" if 0.2126 * r + 0.7152 * g + 0.0722 * b < 0.3 else INK
 
 
-def heatmap(assoc, model, labels, n_pcs=20):
-    """PC × 标签的关联强度，有序标签（|ρ|）和二值标签（2|AUC − 0.5|）分成上下两块，各自一个色标。"""
+def _assoc_blocks(assoc, model, labels, n_pcs):
+    """有序标签（|ρ|）和二值标签（2|AUC − 0.5|）各一块：[(指标, 标签, 数值 [标签, n_pcs])]。"""
     d = assoc[(assoc["model"] == model) & (assoc["component"] <= n_pcs)]
     d = d.assign(strength=d["value"].abs().where(d["metric"] == "spearman", (2 * (d["value"] - 0.5)).abs()))
     table = d.pivot(index="label", columns="component", values="strength")
     metric = d.drop_duplicates("label").set_index("label")["metric"]
     blocks = [(m, [l for l in labels if metric[l] == m]) for m in ("spearman", "auroc")]
-    blocks = [(m, b) for m, b in blocks if b]
+    return [(m, b, table.loc[b].to_numpy()) for m, b in blocks if b]
 
+
+def _draw_heatmap(ax, metric, block, values, fontsize=11):
+    n_pcs = values.shape[1]
+    mesh = ax.pcolormesh(values, cmap=CMAPS[metric], vmin=0, vmax=1, edgecolors=SURFACE, linewidth=1.5)
+    for (i, j), v in np.ndenumerate(values):
+        text = f"{v:.2f}"
+        color = INK_MUTED if float(text) < 0.1 else _text_color(to_rgb(CMAPS[metric](v)))
+        ax.text(j + 0.5, i + 0.5, text, ha="center", va="center", fontsize=fontsize, color=color)
+    ax.invert_yaxis()
+    ax.set_yticks(np.arange(len(block)) + 0.5, [LABEL_NAMES[l] for l in block], color=INK)
+    for tick, label in zip(ax.get_yticklabels(), block):
+        tick.set_fontweight("bold" if label == "eye_dr_level" else "normal")
+    ax.set_xticks(np.arange(n_pcs) + 0.5, range(1, n_pcs + 1), color=INK_SECONDARY)
+    ax.tick_params(length=0)
+    ax.spines[:].set_visible(False)
+    return mesh
+
+
+def _colorbar(fig, mesh, cax, metric, ticks, orientation="vertical"):
+    cbar = fig.colorbar(mesh, cax=cax, ticks=ticks, format="%.1f", orientation=orientation)
+    cbar.outline.set_visible(False)
+    cbar.ax.tick_params(length=0, colors=INK_SECONDARY)
+    if orientation == "vertical":
+        cbar.set_label(METRIC_NAMES[metric], rotation=0, ha="left", va="center", color=INK)
+    else:
+        cbar.ax.set_title(METRIC_NAMES[metric], color=INK, fontsize="medium")
+
+
+def heatmap(assoc, model, labels, n_pcs=20):
+    """PC × 标签的关联强度，有序标签（|ρ|）和二值标签（2|AUC − 0.5|）分成上下两块，各自一个色标。"""
+    blocks = _assoc_blocks(assoc, model, labels, n_pcs)
     fig, axes = plt.subplots(
         len(blocks), 2, squeeze=False, facecolor=SURFACE,
         figsize=(0.5 * n_pcs + 2.5, 0.42 * len(labels) + 1.2),
-        gridspec_kw={"height_ratios": [len(b) for _, b in blocks], "width_ratios": [n_pcs, 0.3], "hspace": 0.18, "wspace": 0.03},
+        gridspec_kw={"height_ratios": [len(b) for _, b, _ in blocks], "width_ratios": [n_pcs, 0.3], "hspace": 0.18, "wspace": 0.03},
     )
-    for (m, block), (ax, cax) in zip(blocks, axes):
-        values = table.loc[block].to_numpy()
-        mesh = ax.pcolormesh(values, cmap=CMAPS[m], vmin=0, vmax=1, edgecolors=SURFACE, linewidth=1.5)
-        for (i, j), v in np.ndenumerate(values):
-            text = f"{v:.2f}"
-            color = INK_MUTED if float(text) < 0.1 else _text_color(to_rgb(CMAPS[m](v)))
-            ax.text(j + 0.5, i + 0.5, text, ha="center", va="center", fontsize=11, color=color)
-        ax.invert_yaxis()
-        ax.set_yticks(np.arange(len(block)) + 0.5, [LABEL_NAMES[l] for l in block], color=INK)
-        for tick, label in zip(ax.get_yticklabels(), block):
-            tick.set_fontweight("bold" if label == "eye_dr_level" else "normal")
-        ax.set_xticks(np.arange(n_pcs) + 0.5, range(1, n_pcs + 1), color=INK_SECONDARY)
-        ax.tick_params(length=0)
-        ax.spines[:].set_visible(False)
-
-        cbar = fig.colorbar(mesh, cax=cax, ticks=[0, 0.5, 1] if len(block) > 1 else [0, 1], format="%.1f")
-        cbar.outline.set_visible(False)
-        cbar.ax.tick_params(length=0, colors=INK_SECONDARY)
-        cbar.set_label(METRIC_NAMES[m], rotation=0, ha="left", va="center", color=INK)
+    for (m, block, values), (ax, cax) in zip(blocks, axes):
+        mesh = _draw_heatmap(ax, m, block, values)
+        _colorbar(fig, mesh, cax, m, [0, 0.5, 1] if len(block) > 1 else [0, 1])
 
     for ax in axes[:-1, 0]:
         ax.set_xticklabels([])
@@ -70,7 +85,6 @@ def heatmap(assoc, model, labels, n_pcs=20):
     return fig
 
 
-# 模型的颜色固定，所有图通用（分类色板前 4 个，按固定顺序）
 MODEL_COLORS = {"siglip": "#2a78d6", "medsiglip": "#eb6834", "conceptclip": "#1baf7a", "flair": "#eda100"}
 GRID, AXIS = "#e6e5e0", "#c9c8c3"
 
@@ -138,32 +152,72 @@ def grade_boxplot(scores, grades, models, ylabel="PC1 score (z-score)", width=0.
     return fig
 
 
+def _scatter_handles():
+    return _grade_handles() + [plt.Line2D([], [], ls="", marker="o", ms=6, color=INK_SECONDARY, label="Left eye"),
+                               plt.Line2D([], [], ls="", marker="o", ms=6, mfc="none", mec=INK_SECONDARY, label="Right eye")]
+
+
+def _draw_scatter(ax, score, ratio, grades, right, size):
+    """PC1 调成与 DR 正相关，PC2 调成右眼为正；颜色为 DR 等级，实心为左眼、空心为右眼；纵横同比例。"""
+    z = score[:, :2] * [np.sign(np.corrcoef(score[:, 0], grades)[0, 1]), np.sign(np.corrcoef(score[:, 1], right)[0, 1])]
+    order = np.random.default_rng(0).permutation(len(grades))  # 随机绘制顺序，避免某个等级总压在上面
+    edge = np.array([to_rgba(GRADE_COLORS[g], 0.8) for g in grades])
+    face = edge.copy()
+    face[right, 3] = 0  # 右眼空心
+    ax.scatter(*z[order].T, s=size, facecolors=face[order], edgecolors=edge[order], linewidths=0.6)
+    ax.set_box_aspect(1)  # 图框为正方形
+    ax.set_aspect("equal", adjustable="datalim")  # 纵横同比例：扩展坐标范围来适应正方形图框
+    ax.set_xticks([]); ax.set_yticks([])
+    ax.spines[:].set_color(AXIS)
+    ax.set_xlabel(f"PC1 ({ratio[0]:.1%})", color=INK_SECONDARY)
+    ax.set_ylabel(f"PC2 ({ratio[1]:.1%})", color=INK_SECONDARY)
+
+
 def pc_scatter(scores, ratios, grades, eyes, models, ncols=2, size=9):
     """各模型第 1、2 主成分得分的散点图（纵横同比例），每行 ncols 个。颜色为 DR 等级，实心为左眼、空心为右眼。
     主成分的正负号是任意的：PC1 调成与 DR 正相关，PC2 调成右眼为正。"""
     right = eyes == "R"
-    order = np.random.default_rng(0).permutation(len(grades))  # 随机绘制顺序，避免某个等级总压在上面
     nrows = -(-len(models) // ncols)
     fig, axes = plt.subplots(nrows, ncols, squeeze=False, figsize=(3.0 * ncols + 1.2, 3.3 * nrows), facecolor=SURFACE,
                              gridspec_kw={"wspace": 0.12, "hspace": 0.3})
     for ax in axes.flat[len(models):]:
         ax.axis("off")
     for ax, m in zip(axes.flat, models):
-        z = scores[m][:, :2] * [np.sign(np.corrcoef(scores[m][:, 0], grades)[0, 1]), np.sign(np.corrcoef(scores[m][:, 1], right)[0, 1])]
-        edge = np.array([to_rgba(GRADE_COLORS[g], 0.8) for g in grades])
-        face = edge.copy()
-        face[right, 3] = 0  # 右眼空心
-        ax.scatter(*z[order].T, s=size, facecolors=face[order], edgecolors=edge[order], linewidths=0.6)
-        ax.set_box_aspect(1)  # 图框为正方形
-        ax.set_aspect("equal", adjustable="datalim")  # 纵横同比例：扩展坐标范围来适应正方形图框
-        ax.set_xticks([]); ax.set_yticks([])
-        ax.spines[:].set_color(AXIS)
-        ax.set_xlabel(f"PC1 ({ratios[m][0]:.1%})", color=INK_SECONDARY)
-        ax.set_ylabel(f"PC2 ({ratios[m][1]:.1%})", color=INK_SECONDARY)
+        _draw_scatter(ax, scores[m], ratios[m], grades, right, size)
         ax.set_title(MODEL_NAMES[m], loc="left", color=INK, fontweight="bold")
-    handles = _grade_handles() + [plt.Line2D([], [], ls="", marker="o", ms=6, color=INK_SECONDARY, label="Left eye"),
-                plt.Line2D([], [], ls="", marker="o", ms=6, mfc="none", mec=INK_SECONDARY, label="Right eye")]
-    axes[0, -1].legend(handles=handles, frameon=False, loc="upper left", bbox_to_anchor=(1.02, 1), labelcolor=INK, handletextpad=0.3)
+    axes[0, -1].legend(handles=_scatter_handles(), frameon=False, loc="upper left", bbox_to_anchor=(1.02, 1), labelcolor=INK, handletextpad=0.3)
+    return fig
+
+
+def pc_overview(assoc, scores, ratios, grades, eyes, models, labels, n_pcs=10, size=4):
+    """每个模型一行：左为前 n_pcs 个主成分与标签的关联热图，右为 PC1–PC2 散点图。色标和图例放在最下面。"""
+    right = eyes == "R"
+    blocks = {m: _assoc_blocks(assoc, m, labels, n_pcs) for m in models}
+    heights = [len(b) for _, b, _ in blocks[models[0]]]
+    with plt.rc_context({"font.size": 8}):
+        fig = plt.figure(figsize=(0.42 * n_pcs + 3.6, 1.8 * len(models) + 1.1), facecolor=SURFACE)
+        outer = fig.add_gridspec(len(models) + 1, 2, width_ratios=[0.42 * n_pcs, 1.9], height_ratios=[1] * len(models) + [0.5],
+                                 wspace=0.05, hspace=0.3)
+        meshes = {}
+        for r, m in enumerate(models):
+            inner = outer[r, 0].subgridspec(len(heights), 1, height_ratios=heights, hspace=0.12)
+            axes = [fig.add_subplot(inner[k]) for k in range(len(heights))]
+            for ax, (metric, block, values) in zip(axes, blocks[m]):
+                meshes[metric] = _draw_heatmap(ax, metric, block, values, fontsize=6.5)
+            for ax in axes[:-1] if r == len(models) - 1 else axes:
+                ax.set_xticklabels([])  # 各行的列对齐，只在最后一行标主成分编号
+            axes[0].set_title(MODEL_NAMES[m], loc="left", color=INK, fontweight="bold", fontsize=9)
+            _draw_scatter(fig.add_subplot(outer[r, 1]), scores[m], ratios[m], grades, right, size)
+        axes[-1].set_xlabel("Principal component", color=INK_SECONDARY)
+
+        bottom = outer[-1, 0].subgridspec(2, len(meshes) * 2 + 1, height_ratios=[1.6, 1],
+                                          width_ratios=[1, 3] * len(meshes) + [1], wspace=0)
+        for k, (metric, mesh) in enumerate(meshes.items()):
+            _colorbar(fig, mesh, fig.add_subplot(bottom[1, 2 * k + 1]), metric, [0, 0.5, 1], orientation="horizontal")
+        legend_ax = fig.add_subplot(outer[-1, 1])
+        legend_ax.axis("off")
+        legend_ax.legend(handles=_scatter_handles(), frameon=False, loc="center", ncol=2, labelcolor=INK,
+                         handletextpad=0.2, columnspacing=0.8, fontsize=7, markerscale=0.8)
     return fig
 
 
