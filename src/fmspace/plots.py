@@ -157,7 +157,7 @@ def _scatter_handles():
                                plt.Line2D([], [], ls="", marker="o", ms=6, mfc="none", mec=INK_SECONDARY, label="Right eye")]
 
 
-def _draw_scatter(ax, score, ratio, grades, right, size):
+def _draw_scatter(ax, score, ratio, grades, right, size, show_ratio=True):
     """PC1 调成与 DR 正相关，PC2 调成右眼为正；颜色为 DR 等级，实心为左眼、空心为右眼；纵横同比例。"""
     z = score[:, :2] * [np.sign(np.corrcoef(score[:, 0], grades)[0, 1]), np.sign(np.corrcoef(score[:, 1], right)[0, 1])]
     order = np.random.default_rng(0).permutation(len(grades))  # 随机绘制顺序，避免某个等级总压在上面
@@ -169,8 +169,8 @@ def _draw_scatter(ax, score, ratio, grades, right, size):
     ax.set_aspect("equal", adjustable="datalim")  # 纵横同比例：扩展坐标范围来适应正方形图框
     ax.set_xticks([]); ax.set_yticks([])
     ax.spines[:].set_color(AXIS)
-    ax.set_xlabel(f"PC1 ({ratio[0]:.1%})", color=INK_SECONDARY)
-    ax.set_ylabel(f"PC2 ({ratio[1]:.1%})", color=INK_SECONDARY)
+    ax.set_xlabel(f"PC1 ({ratio[0]:.1%})" if show_ratio else "PC1", color=INK_SECONDARY)
+    ax.set_ylabel(f"PC2 ({ratio[1]:.1%})" if show_ratio else "PC2", color=INK_SECONDARY)
 
 
 def pc_scatter(scores, ratios, grades, eyes, models, ncols=2, size=9):
@@ -189,14 +189,14 @@ def pc_scatter(scores, ratios, grades, eyes, models, ncols=2, size=9):
     return fig
 
 
-def pc_overview(assoc, scores, ratios, grades, eyes, models, labels, n_pcs=10, size=4):
+def pc_overview(assoc, scores, ratios, grades, eyes, models, labels, n_pcs=10, size=2.5):
     """每个模型一行：左为前 n_pcs 个主成分与标签的关联热图，右为 PC1–PC2 散点图。色标和图例放在最下面。"""
     right = eyes == "R"
     blocks = {m: _assoc_blocks(assoc, m, labels, n_pcs) for m in models}
     heights = [len(b) for _, b, _ in blocks[models[0]]]
     with plt.rc_context({"font.size": 8}):
-        fig = plt.figure(figsize=(0.42 * n_pcs + 3.6, 1.8 * len(models) + 1.1), facecolor=SURFACE)
-        outer = fig.add_gridspec(len(models) + 1, 2, width_ratios=[0.42 * n_pcs, 1.9], height_ratios=[1] * len(models) + [0.5],
+        fig = plt.figure(figsize=(0.27 * n_pcs + 3.2, 1.75 * len(models) + 1.1), facecolor=SURFACE)
+        outer = fig.add_gridspec(len(models) + 1, 2, width_ratios=[0.27 * n_pcs, 1.8], height_ratios=[1] * len(models) + [0.5],
                                  wspace=0.05, hspace=0.3)
         meshes = {}
         for r, m in enumerate(models):
@@ -204,10 +204,11 @@ def pc_overview(assoc, scores, ratios, grades, eyes, models, labels, n_pcs=10, s
             axes = [fig.add_subplot(inner[k]) for k in range(len(heights))]
             for ax, (metric, block, values) in zip(axes, blocks[m]):
                 meshes[metric] = _draw_heatmap(ax, metric, block, values, fontsize=6.5)
+                ax.set_aspect("equal", anchor="W")  # 格子为正方形
             for ax in axes[:-1] if r == len(models) - 1 else axes:
                 ax.set_xticklabels([])  # 各行的列对齐，只在最后一行标主成分编号
             axes[0].set_title(MODEL_NAMES[m], loc="left", color=INK, fontweight="bold", fontsize=9)
-            _draw_scatter(fig.add_subplot(outer[r, 1]), scores[m], ratios[m], grades, right, size)
+            _draw_scatter(fig.add_subplot(outer[r, 1]), scores[m], ratios[m], grades, right, size, show_ratio=False)
         axes[-1].set_xlabel("Principal component", color=INK_SECONDARY)
 
         bottom = outer[-1, 0].subgridspec(2, len(meshes) * 2 + 1, height_ratios=[1.6, 1],
