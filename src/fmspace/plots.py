@@ -164,7 +164,7 @@ def _draw_scatter(ax, score, ratio, grades, right, size, show_ratio=True):
     edge = np.array([to_rgba(GRADE_COLORS[g], 0.8) for g in grades])
     face = edge.copy()
     face[right, 3] = 0  # 右眼空心
-    ax.scatter(*z[order].T, s=size, facecolors=face[order], edgecolors=edge[order], linewidths=0.6)
+    ax.scatter(*z[order].T, s=size, facecolors=face[order], edgecolors=edge[order], linewidths=0.3)
     ax.set_box_aspect(1)  # 图框为正方形
     ax.set_aspect("equal", adjustable="datalim")  # 纵横同比例：扩展坐标范围来适应正方形图框
     ax.set_xticks([]); ax.set_yticks([])
@@ -195,8 +195,8 @@ def pc_overview(assoc, scores, ratios, grades, eyes, models, labels, n_pcs=10, s
     blocks = {m: _assoc_blocks(assoc, m, labels, n_pcs) for m in models}
     heights = [len(b) for _, b, _ in blocks[models[0]]]
     with plt.rc_context({"font.size": 8}):
-        fig = plt.figure(figsize=(0.27 * n_pcs + 3.2, 1.75 * len(models) + 1.1), facecolor=SURFACE)
-        outer = fig.add_gridspec(len(models) + 1, 2, width_ratios=[0.27 * n_pcs, 1.8], height_ratios=[1] * len(models) + [0.5],
+        fig = plt.figure(figsize=(0.27 * n_pcs + 3.8, 2.3 * len(models) + 1.1), facecolor=SURFACE)
+        outer = fig.add_gridspec(len(models) + 1, 2, width_ratios=[0.27 * n_pcs, 2.4], height_ratios=[1] * len(models) + [0.5],
                                  wspace=0.05, hspace=0.3)
         meshes = {}
         for r, m in enumerate(models):
