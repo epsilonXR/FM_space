@@ -222,12 +222,13 @@ def pc_overview(assoc, scores, ratios, grades, eyes, models, labels, n_pcs=10, s
     return fig
 
 
-def saliency_figure(images, maps, row_labels, col_labels, alpha=0.9, levels=(0.25, 0.5), panel=2.6):
+def saliency_figure(images, maps, row_labels, col_labels, alpha=0.9, levels=(0.25, 0.5), panel=2.6, panel_labels=None):
     """每行一张图：原图 + 各主成分的显著图（叠在灰度原图上，视野圆外不显示）。
     原图保持原始分辨率，显著图 [K, h, w] 拉伸到原图大小叠加；红 = 推高，蓝 = 推低；
     不透明度随 |值| 增大（接近 0 处透明，露出原图，最大为 alpha）；
     等高线画在 ±levels × 上限处（红 = 正，蓝 = 负；越靠外越细）；
-    每列共用以 0 为中心的色标（视野内 |值| 的 99% 分位）。"""
+    每列共用以 0 为中心的色标（视野内 |值| 的 99% 分位）。
+    panel_labels[i][j]：写在第 i 行第 j 个显著图左上角的小字（可省略）。"""
     n, k = len(images), len(col_labels)
     grays = [np.asarray(im.convert("L")) for im in images]
     fovs = [np.asarray(Image.fromarray(g).resize(m.shape[:0:-1])) > 10 for g, m in zip(grays, maps)]
@@ -251,6 +252,9 @@ def saliency_figure(images, maps, row_labels, col_labels, alpha=0.9, levels=(0.2
             for sign, color in [(1, "#b2182b"), (-1, "#2166ac")]:
                 axes[i, j + 1].contour(x, y, np.where(fov, sign * m[j], np.nan), levels=np.asarray(levels) * limits[j],
                                        colors=color, linewidths=widths)
+            if panel_labels is not None:
+                axes[i, j + 1].text(0.03, 0.97, panel_labels[i][j], transform=axes[i, j + 1].transAxes, ha="left", va="top",
+                                    fontsize=7, color="white", bbox={"facecolor": "black", "alpha": 0.45, "edgecolor": "none", "pad": 1.5})
             if i == n - 1:
                 cbar = fig.colorbar(mesh, cax=axes[n, j + 1], orientation="horizontal", format="%.2g")
                 cbar.outline.set_visible(False)

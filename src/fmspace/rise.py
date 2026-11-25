@@ -5,6 +5,7 @@
 import numpy as np
 import torch
 import torch.nn.functional as F
+from PIL import Image
 from skimage.transform import resize
 from tqdm.auto import tqdm
 
@@ -107,3 +108,18 @@ def fov_blur(x, fov, sigma):
     leak in; outside the field of view the image is kept. x: [n, C, H, W]; fov: [n, 1, H, W]."""
     blurred = gaussian_blur(x * fov, sigma) / gaussian_blur(fov, sigma)
     return torch.where(fov.bool(), blurred, x)
+
+
+@torch.inference_mode()
+def model_view(preprocess, image, threshold=10):
+    """What the model sees, however preprocess resizes, crops, pads or normalizes.
+
+    Returns x = preprocess([image]) [1, C, H, W]; the field of view fov [1, 1, H, W] where the input, rescaled
+    between the inputs of an all-black and an all-white image, is brighter than threshold / 255; and that rescaled
+    input as a PIL image for plotting."""
+    x = preprocess([image])
+    black, white = preprocess([Image.new("RGB", image.size, (0, 0, 0)), Image.new("RGB", image.size, (255, 255, 255))])
+    v = torch.nan_to_num((x[0] - black) / (white - black)).clamp(0, 1)  # padding: white − black = 0
+    fov = (v.mean(0) > threshold / 255).float()[None, None]
+    view = Image.fromarray((v.permute(1, 2, 0).float().cpu().numpy() * 255).round().astype("uint8"))
+    return x, fov, view
