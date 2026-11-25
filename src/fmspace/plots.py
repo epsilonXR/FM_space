@@ -222,17 +222,22 @@ def pc_overview(assoc, scores, ratios, grades, eyes, models, labels, n_pcs=10, s
     return fig
 
 
-def saliency_figure(images, maps, row_labels, col_labels, alpha=0.9, levels=(0.25, 0.5), panel=2.6, panel_labels=None):
+def saliency_figure(images, maps, row_labels, col_labels, alpha=0.9, levels=(0.25, 0.5), panel=2.6, panel_labels=None, scale="column"):
     """每行一张图：原图 + 各主成分的显著图（叠在灰度原图上，视野圆外不显示）。
     原图保持原始分辨率，显著图 [K, h, w] 拉伸到原图大小叠加；红 = 推高，蓝 = 推低；
     不透明度随 |值| 增大（接近 0 处透明，露出原图，最大为 alpha）；
     等高线画在 ±levels × 上限处（红 = 正，蓝 = 负；越靠外越细）；
-    每列共用以 0 为中心的色标（视野内 |值| 的 99% 分位）。
+    色标以 0 为中心，上限为视野内 |值| 的 99% 分位：scale="column" 时每列共用；scale="panel" 时每格各自计算，
+    左上角写上该格的上限（±），底部色条为相对刻度 −1〜1。
     panel_labels[i][j]：写在第 i 行第 j 个显著图左上角的小字（可省略）。"""
     n, k = len(images), len(col_labels)
     grays = [np.asarray(im.convert("L")) for im in images]
     fovs = [np.asarray(Image.fromarray(g).resize(m.shape[:0:-1])) > 10 for g, m in zip(grays, maps)]
-    limits = [np.percentile(np.concatenate([np.abs(m[j][f]) for m, f in zip(maps, fovs)]), 99) for j in range(k)]
+    if scale == "column":
+        column = [np.percentile(np.concatenate([np.abs(m[j][f]) for m, f in zip(maps, fovs)]), 99) for j in range(k)]
+        limits = [column] * n
+    else:
+        limits = [[np.percentile(np.abs(m[j][f]), 99) for j in range(k)] for m, f in zip(maps, fovs)]
 
     fig, axes = plt.subplots(n + 1, k + 1, squeeze=False, figsize=(panel * (k + 1), panel * 0.92 * n + 0.6), facecolor=SURFACE,
                              gridspec_kw={"height_ratios": [1] * n + [0.05], "wspace": 0.03, "hspace": 0.05})
@@ -241,22 +246,29 @@ def saliency_figure(images, maps, row_labels, col_labels, alpha=0.9, levels=(0.2
         axes[i, 0].imshow(image, interpolation="none")
         axes[i, 0].set_ylabel(row_labels[i], color=INK, fontsize=9)
         for j in range(k):
-            mesh = plt.cm.ScalarMappable(plt.Normalize(-limits[j], limits[j]), "RdBu_r")
+            limit = limits[i][j]
+            mesh = plt.cm.ScalarMappable(plt.Normalize(-limit, limit), "RdBu_r")
             rgba = mesh.to_rgba(m[j])
-            rgba[..., 3] = alpha * np.clip(np.abs(m[j]) / limits[j], 0, 1) * fov
+            rgba[..., 3] = alpha * np.clip(np.abs(m[j]) / limit, 0, 1) * fov
             axes[i, j + 1].imshow(gray, cmap="gray", interpolation="none")
             axes[i, j + 1].imshow(rgba, extent=extent, interpolation="bilinear")
             h, w = m[j].shape
             x, y = (np.arange(w) + 0.5) * image.width / w, (np.arange(h) + 0.5) * image.height / h
             widths = np.linspace(0.4, 0.8, len(levels))
             for sign, color in [(1, "#b2182b"), (-1, "#2166ac")]:
-                axes[i, j + 1].contour(x, y, np.where(fov, sign * m[j], np.nan), levels=np.asarray(levels) * limits[j],
+                axes[i, j + 1].contour(x, y, np.where(fov, sign * m[j], np.nan), levels=np.asarray(levels) * limit,
                                        colors=color, linewidths=widths)
-            if panel_labels is not None:
-                axes[i, j + 1].text(0.03, 0.97, panel_labels[i][j], transform=axes[i, j + 1].transAxes, ha="left", va="top",
+            label = [panel_labels[i][j]] if panel_labels is not None else []
+            if scale == "panel":
+                label.append(f"±{limit:.2g}")
+            if label:
+                axes[i, j + 1].text(0.03, 0.97, "  ".join(label), transform=axes[i, j + 1].transAxes, ha="left", va="top",
                                     fontsize=7, color="white", bbox={"facecolor": "black", "alpha": 0.45, "edgecolor": "none", "pad": 1.5})
             if i == n - 1:
-                cbar = fig.colorbar(mesh, cax=axes[n, j + 1], orientation="horizontal", format="%.2g")
+                if scale == "panel":
+                    mesh = plt.cm.ScalarMappable(plt.Normalize(-1, 1), "RdBu_r")
+                cbar = fig.colorbar(mesh, cax=axes[n, j + 1], orientation="horizontal", format="%.2g",
+                                    ticks=[-1, 0, 1] if scale == "panel" else None)
                 cbar.outline.set_visible(False)
                 cbar.ax.tick_params(colors=INK_SECONDARY, labelsize=8, length=0)
     axes[n, 0].axis("off")
